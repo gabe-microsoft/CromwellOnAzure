@@ -161,7 +161,7 @@ namespace Tes.Models
         /// <typeparam name="T"></typeparam>
         /// <param name="key">Metadata item key</param>
         /// <param name="value">Metadata item value</param>
-        private void AddOrUpdateMetadataItem<T>(string key, T value)
+        public void AddOrUpdateMetadataItem<T>(string key, T value)
         {
             if (value is not null)
             {

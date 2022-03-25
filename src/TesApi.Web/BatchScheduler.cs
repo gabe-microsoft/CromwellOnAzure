@@ -338,11 +338,13 @@ namespace TesApi.Web
                 }
 
                 var cloudTask = await ConvertTesTaskToBatchTaskAsync(tesTask, poolInformation?.AutoPoolSpecification?.PoolSpecification?.VirtualMachineConfiguration?.ContainerConfiguration is not null);
+                tesTask.AddToEventLog($"Requested new job on pool: {poolInformation.PoolId}", DateTimeOffset.UtcNow);
                 logger.LogInformation($"Creating batch job for TES task {tesTask.Id}. Using VM size {virtualMachineInfo.VmSize}.");
                 await azureProxy.CreateBatchJobAsync(jobId, cloudTask, poolInformation);
 
                 tesTaskLog.StartTime = DateTimeOffset.UtcNow;
                 tesTask.State = TesState.INITIALIZINGEnum;
+                tesTask.AddToEventLog("Batch job created", tesTaskLog.StartTime.Value);
             }
             catch (AzureBatchQuotaMaxedOutException exception)
             {

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Tes.Models;
@@ -25,6 +26,18 @@ namespace Tes.Extensions
                 tesTaskLog.SystemLogs ??= new List<string>();
                 tesTaskLog.SystemLogs.AddRange(logEntries);
             }
+        }
+
+        /// <summary>
+        /// Writes to <see cref="TesTask"/> event log.
+        /// </summary>
+        /// <param name="tesTask"><see cref="TesTask"/></param>
+        /// <param name="event_name">Name of event to log.</param>
+        /// <param name="event_time">Time associated with event.</param>
+        public static void AddToEventLog(this TesTask tesTask, string event_name, DateTimeOffset event_time)
+        {
+            var tesTaskLog = tesTask.GetOrAddTesTaskLog();
+            tesTaskLog.AddOrUpdateMetadataItem(event_name, event_time);
         }
 
         /// <summary>
