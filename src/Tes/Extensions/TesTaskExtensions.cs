@@ -37,7 +37,7 @@ namespace Tes.Extensions
         public static void AddToEventLog(this TesTask tesTask, string event_name, DateTimeOffset event_time)
         {
             var tesTaskLog = tesTask.GetOrAddTesTaskLog();
-            tesTaskLog.AddOrUpdateMetadataItem(event_name, event_time);
+            tesTaskLog.AddOrUpdateMetadataItem("Event: " + event_name, event_time);
         }
 
         /// <summary>
