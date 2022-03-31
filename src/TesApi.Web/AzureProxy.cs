@@ -283,6 +283,8 @@ namespace TesApi.Web
         {
             try
             {
+                var poolId = "";
+                var nodeId = "";
                 var nodeAllocationFailed = false;
                 string nodeErrorCode = null;
                 IEnumerable<string> nodeErrorDetails = null;
@@ -290,6 +292,7 @@ namespace TesApi.Web
                 ComputeNodeState? nodeState = null;
                 TaskState? taskState = null;
                 TaskExecutionInformation taskExecutionInformation = null;
+                TaskStatistics taskStatistics = null;
 
                 var jobFilter = new ODATADetailLevel
                 {
@@ -327,12 +330,15 @@ namespace TesApi.Web
 
                     if (pool is not null)
                     {
+                        poolId = pool.Id;
+
                         nodeAllocationFailed = pool.ResizeErrors?.Count > 0;
 
                         var node = (await pool.ListComputeNodes().ToListAsync()).FirstOrDefault();
 
                         if (node is not null)
                         {
+                            nodeId = node.Id;
                             nodeState = node.State;
                             var nodeError = node.Errors?.FirstOrDefault();
                             nodeErrorCode = nodeError?.Code;
@@ -353,6 +359,7 @@ namespace TesApi.Web
                     var batchTask = await batchClient.JobOperations.GetTaskAsync(job.Id, tesTaskId);
                     taskState = batchTask.State;
                     taskExecutionInformation = batchTask.ExecutionInformation;
+                    taskStatistics = batchTask.Statistics;
                 }
                 catch (Exception ex)
                 {
@@ -364,6 +371,8 @@ namespace TesApi.Web
                     MoreThanOneActiveJobFound = false,
                     ActiveJobWithMissingAutoPool = activeJobWithMissingAutoPool,
                     AttemptNumber = attemptNumber,
+                    PoolId = poolId,
+                    NodeId = nodeId,
                     NodeAllocationFailed = nodeAllocationFailed,
                     NodeErrorCode = nodeErrorCode,
                     NodeErrorDetails = nodeErrorDetails,
@@ -379,7 +388,8 @@ namespace TesApi.Web
                     TaskExitCode = taskExecutionInformation?.ExitCode,
                     TaskFailureInformation = taskExecutionInformation?.FailureInformation,
                     TaskContainerState = taskExecutionInformation?.ContainerInformation?.State,
-                    TaskContainerError = taskExecutionInformation?.ContainerInformation?.Error
+                    TaskContainerError = taskExecutionInformation?.ContainerInformation?.Error,
+                    TaskStatistics = taskStatistics
                 };
             }
             catch (Exception ex)

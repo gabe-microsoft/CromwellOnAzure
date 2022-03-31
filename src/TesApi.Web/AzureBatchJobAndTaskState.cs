@@ -26,6 +26,14 @@ namespace TesApi.Web
         /// </summary>
         public int AttemptNumber { get; set; }
         /// <summary>
+        /// Pool ID used for this task.
+        /// </summary>
+        public string PoolId { get; set; }
+        /// <summary>
+        /// Node ID used for this task.
+        /// </summary>
+        public string NodeId { get; set; }
+        /// <summary>
         /// The Batch service encountered an error while resizing
         ///     the pool or the pool's Microsoft.Azure.Batch.CloudPool.AllocationState
         ///     was Steady.
@@ -117,5 +125,9 @@ namespace TesApi.Web
         ///     equivilant to the error field returned by "docker inspect".
         /// </remarks>
         public string TaskContainerError { get; set; }
+        /// <summary>
+        /// Task resource usage statistics.
+        /// </summary>
+        public TaskStatistics TaskStatistics { get; set; }
     }
 }
