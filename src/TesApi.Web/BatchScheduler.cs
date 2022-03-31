@@ -338,7 +338,7 @@ namespace TesApi.Web
                 }
 
                 var cloudTask = await ConvertTesTaskToBatchTaskAsync(tesTask, poolInformation?.AutoPoolSpecification?.PoolSpecification?.VirtualMachineConfiguration?.ContainerConfiguration is not null);
-                tesTask.AddToEventLog($"Requested new job on pool: {poolInformation.PoolId}", DateTimeOffset.UtcNow);
+                tesTask.AddToEventLog($"Requested new Batch job on pool: {poolInformation.PoolId}", DateTimeOffset.UtcNow);
                 logger.LogInformation($"Creating batch job for TES task {tesTask.Id}. Using VM size {virtualMachineInfo.VmSize}.");
                 await azureProxy.CreateBatchJobAsync(jobId, cloudTask, poolInformation);
 
