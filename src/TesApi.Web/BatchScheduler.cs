@@ -485,16 +485,16 @@ namespace TesApi.Web
                     tesTask.AddToEventLog("Batch task start", azureBatchJobAndTaskState.TaskStartTime);
                     tesTask.AddToEventLog("Batch task end", azureBatchJobAndTaskState.TaskEndTime);
                     tesTask.AddToEventLog("Batch job end", azureBatchJobAndTaskState.JobEndTime);
-                    tesTask.AddToEventLog($"Stats start", azureBatchJobAndTaskState.TaskStatistics.StartTime);
-                    tesTask.AddToEventLog($"Stats end", azureBatchJobAndTaskState.TaskStatistics.LastUpdateTime);
-                    tesTask.AddToEventLog($"Stats: Wall Clock Time: {azureBatchJobAndTaskState.TaskStatistics.WallClockTime}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: Wait Time: {azureBatchJobAndTaskState.TaskStatistics.WaitTime}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: Kernel CPU Time: {azureBatchJobAndTaskState.TaskStatistics.KernelCpuTime}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: User CPU Time: {azureBatchJobAndTaskState.TaskStatistics.UserCpuTime}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: Read GiB: {azureBatchJobAndTaskState.TaskStatistics.ReadIOGiB}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: Read IOPS: {azureBatchJobAndTaskState.TaskStatistics.ReadIOps}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: Write GiB: {azureBatchJobAndTaskState.TaskStatistics.WriteIOGiB}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: Write IOPS: {azureBatchJobAndTaskState.TaskStatistics.WriteIOps}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats start", azureBatchJobAndTaskState.TaskStatistics?.StartTime);
+                    tesTask.AddToEventLog($"Stats end", azureBatchJobAndTaskState.TaskStatistics?.LastUpdateTime);
+                    tesTask.AddToEventLog($"Stats: Wall Clock Time: {azureBatchJobAndTaskState.TaskStatistics?.WallClockTime}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: Wait Time: {azureBatchJobAndTaskState.TaskStatistics?.WaitTime}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: Kernel CPU Time: {azureBatchJobAndTaskState.TaskStatistics?.KernelCpuTime}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: User CPU Time: {azureBatchJobAndTaskState.TaskStatistics?.UserCpuTime}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: Read GiB: {azureBatchJobAndTaskState.TaskStatistics?.ReadIOGiB}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: Read IOPS: {azureBatchJobAndTaskState.TaskStatistics?.ReadIOps}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: Write GiB: {azureBatchJobAndTaskState.TaskStatistics?.WriteIOGiB}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: Write IOPS: {azureBatchJobAndTaskState.TaskStatistics?.WriteIOps}", DateTimeOffset.UtcNow);
 
                     if (azureBatchJobAndTaskState.TaskExitCode == 0 && azureBatchJobAndTaskState.TaskFailureInformation is null)
                     {
