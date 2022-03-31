@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System;
@@ -105,6 +105,7 @@ namespace TesApi.Web
                 var tesTaskLog = tesTask.GetOrAddTesTaskLog();
                 var tesTaskExecutorLog = tesTaskLog.GetOrAddExecutorLog();
 
+                // TODO(gabe): Add metadata to tesTask here.
                 tesTaskLog.BatchNodeMetrics = batchInfo.BatchNodeMetrics;
                 tesTaskLog.CromwellResultCode = batchInfo.CromwellRcCode;
                 tesTaskLog.EndTime = DateTime.UtcNow;
@@ -476,6 +477,24 @@ namespace TesApi.Web
                     return new CombinedBatchTaskInfo { BatchTaskState = BatchTaskState.Running };
                 case TaskState.Completed:
                     var batchJobInfo = JsonConvert.SerializeObject(azureBatchJobAndTaskState);
+
+                    // TODO(gabe): This is a hack to add additional metadata to Cosmos.
+                    tesTask.AddToEventLog($"Pool ID: {azureBatchJobAndTaskState.PoolId}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Node ID: {azureBatchJobAndTaskState.NodeId}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog("Batch job start", azureBatchJobAndTaskState.JobStartTime.Value);
+                    tesTask.AddToEventLog("Batch task start", azureBatchJobAndTaskState.TaskStartTime.Value);
+                    tesTask.AddToEventLog("Batch task end", azureBatchJobAndTaskState.TaskEndTime.Value);
+                    tesTask.AddToEventLog("Batch job end", azureBatchJobAndTaskState.JobEndTime.Value);
+                    tesTask.AddToEventLog($"Stats start", azureBatchJobAndTaskState.TaskStatistics.StartTime);
+                    tesTask.AddToEventLog($"Stats end", azureBatchJobAndTaskState.TaskStatistics.LastUpdateTime);
+                    tesTask.AddToEventLog($"Stats: Wall Clock Time: {azureBatchJobAndTaskState.TaskStatistics.WallClockTime}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: Wait Time: {azureBatchJobAndTaskState.TaskStatistics.WaitTime}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: Kernel CPU Time: {azureBatchJobAndTaskState.TaskStatistics.KernelCpuTime}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: User CPU Time: {azureBatchJobAndTaskState.TaskStatistics.UserCpuTime}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: Read GiB: {azureBatchJobAndTaskState.TaskStatistics.ReadIOGiB}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: Read IOPS: {azureBatchJobAndTaskState.TaskStatistics.ReadIOps}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: Write GiB: {azureBatchJobAndTaskState.TaskStatistics.WriteIOGiB}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog($"Stats: Write IOPS: {azureBatchJobAndTaskState.TaskStatistics.WriteIOps}", DateTimeOffset.UtcNow);
 
                     if (azureBatchJobAndTaskState.TaskExitCode == 0 && azureBatchJobAndTaskState.TaskFailureInformation is null)
                     {
