@@ -33,8 +33,8 @@ namespace Tes.Extensions
         /// </summary>
         /// <param name="tesTask"><see cref="TesTask"/></param>
         /// <param name="event_name">Name of event to log.</param>
-        /// <param name="event_time">Time associated with event.</param>
-        public static void AddToEventLog(this TesTask tesTask, string event_name, DateTimeOffset event_time)
+        /// <param name="event_time">Time associated with event. If null, no event will be recorded.</param>
+        public static void AddToEventLog(this TesTask tesTask, string event_name, DateTimeOffset? event_time)
         {
             var tesTaskLog = tesTask.GetOrAddTesTaskLog();
             tesTaskLog.AddOrUpdateMetadataItem("Event: " + event_name, event_time);

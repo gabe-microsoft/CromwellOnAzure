@@ -345,7 +345,7 @@ namespace TesApi.Web
 
                 tesTaskLog.StartTime = DateTimeOffset.UtcNow;
                 tesTask.State = TesState.INITIALIZINGEnum;
-                tesTask.AddToEventLog("Batch job created", tesTaskLog.StartTime.Value);
+                tesTask.AddToEventLog("Batch job created", tesTaskLog.StartTime);
             }
             catch (AzureBatchQuotaMaxedOutException exception)
             {
@@ -481,10 +481,10 @@ namespace TesApi.Web
                     // TODO(gabe): This is a hack to add additional metadata to Cosmos.
                     tesTask.AddToEventLog($"Pool ID: {azureBatchJobAndTaskState.PoolId}", DateTimeOffset.UtcNow);
                     tesTask.AddToEventLog($"Node ID: {azureBatchJobAndTaskState.NodeId}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog("Batch job start", azureBatchJobAndTaskState.JobStartTime.Value);
-                    tesTask.AddToEventLog("Batch task start", azureBatchJobAndTaskState.TaskStartTime.Value);
-                    tesTask.AddToEventLog("Batch task end", azureBatchJobAndTaskState.TaskEndTime.Value);
-                    tesTask.AddToEventLog("Batch job end", azureBatchJobAndTaskState.JobEndTime.Value);
+                    tesTask.AddToEventLog("Batch job start", azureBatchJobAndTaskState.JobStartTime);
+                    tesTask.AddToEventLog("Batch task start", azureBatchJobAndTaskState.TaskStartTime);
+                    tesTask.AddToEventLog("Batch task end", azureBatchJobAndTaskState.TaskEndTime);
+                    tesTask.AddToEventLog("Batch job end", azureBatchJobAndTaskState.JobEndTime);
                     tesTask.AddToEventLog($"Stats start", azureBatchJobAndTaskState.TaskStatistics.StartTime);
                     tesTask.AddToEventLog($"Stats end", azureBatchJobAndTaskState.TaskStatistics.LastUpdateTime);
                     tesTask.AddToEventLog($"Stats: Wall Clock Time: {azureBatchJobAndTaskState.TaskStatistics.WallClockTime}", DateTimeOffset.UtcNow);
