@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System;
@@ -485,8 +485,8 @@ namespace TesApi.Web
                         {
                             BatchTaskState = BatchTaskState.CompletedSuccessfully,
                             BatchTaskExitCode = azureBatchJobAndTaskState.TaskExitCode,
-                            BatchTaskStartTime = metrics.TaskStartTime ?? azureBatchJobAndTaskState.TaskStartTime,
-                            BatchTaskEndTime = metrics.TaskEndTime ?? azureBatchJobAndTaskState.TaskEndTime,
+                            BatchTaskStartTime = azureBatchJobAndTaskState.TaskStartTime,
+                            BatchTaskEndTime = azureBatchJobAndTaskState.TaskEndTime,
                             BatchNodeMetrics = metrics.BatchNodeMetrics,
                             CromwellRcCode = metrics.CromwellRcCode
                         };
