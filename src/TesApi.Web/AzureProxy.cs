@@ -356,7 +356,11 @@ namespace TesApi.Web
 
                 try
                 {
-                    var batchTask = await batchClient.JobOperations.GetTaskAsync(job.Id, tesTaskId);
+                    var taskFilter = new ODATADetailLevel
+                    {
+                        ExpandClause = "stats"
+                    };
+                    var batchTask = await batchClient.JobOperations.GetTaskAsync(job.Id, tesTaskId, taskFilter);
                     taskState = batchTask.State;
                     taskExecutionInformation = batchTask.ExecutionInformation;
                     taskStatistics = batchTask.Statistics;
