@@ -93,7 +93,7 @@
         /// Local disk file system type
         /// </summary>
         [TesTaskLogMetadataKey("disk_fstype")]
-        public string DisFileSystemType { get; set; }
+        public string DiskFileSystemType { get; set; }
 
         /// <summary>
         /// Toal disk size in GB

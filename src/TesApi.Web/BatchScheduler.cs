@@ -1215,7 +1215,7 @@ namespace TesApi.Web
                             ExecutorDurationInSeconds = GetDurationInSeconds(metrics, "ExecutorStart", "ExecutorEnd"),
                             FileUploadDurationInSeconds = GetDurationInSeconds(metrics, "UploadStart", "UploadEnd"),
                             FileUploadSizeInGB = TryGetValueAsDouble(metrics, "FileUploadSizeInBytes", out var fileUploadSizeInBytes) ? fileUploadSizeInBytes / bytesInGB : (double?)null,
-                            DisFileSystemType = metrics.GetValueOrDefault("DiskFileSystem"),
+                            DiskFileSystemType = metrics.GetValueOrDefault("DiskFileSystem"),
                             DiskSizeInGB = diskSizeInGB,
                             DiskUsedInGB = diskUsedInGB,
                             DiskUsedPercent = diskUsedInGB.HasValue && diskSizeInGB.HasValue && diskSizeInGB > 0 ? (float?)(diskUsedInGB / diskSizeInGB * 100 ) : null,
