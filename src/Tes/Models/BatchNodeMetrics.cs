@@ -90,6 +90,12 @@
         public double? FileUploadSizeInGB { get; set; }
 
         /// <summary>
+        /// Local disk file system type
+        /// </summary>
+        [TesTaskLogMetadataKey("disk_fstype")]
+        public string DisFileSystemType { get; set; }
+
+        /// <summary>
         /// Toal disk size in GB
         /// </summary>
         [TesTaskLogMetadataKey("disk_size_gb")]

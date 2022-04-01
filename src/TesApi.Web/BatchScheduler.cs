@@ -746,9 +746,15 @@ namespace TesApi.Web
             sb.AppendLine($"write_ts UploadStart && \\");
             sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint=/bin/sh {blobxferImageName} {uploadFilesScriptPath} && \\");
             sb.AppendLine($"write_ts UploadEnd && \\");
-            sb.AppendLine($"/bin/bash -c 'disk=( `df -k /mnt | tail -1` ) && echo DiskSizeInKiB=${{disk[1]}} >> /mnt{metricsPath} && echo DiskUsedInKiB=${{disk[2]}} >> /mnt{metricsPath}' && \\");
+
+            // Get local disk info (col 2: file system type, col 3: size in KiB, col 4 KiB used).
+            sb.AppendLine($"disk_info=$(df -kT | grep '/mnt$') && \\");
+            sb.AppendLine($"write_kv DiskFileSystem \"$(echo \"$disk_info\" | cut -d ' ' -f 2)\" && \\");
+            sb.AppendLine($"write_kv DiskSizeInKiB  \"$(echo \"$disk_info\" | cut -d ' ' -f 3)\" && \\");
+            sb.AppendLine($"write_kv DiskUsedInKiB  \"$(echo \"$disk_info\" | cut -d ' ' -f 4)\" && \\");
             sb.AppendLine($"write_kv VmCpuModelName \"$(cat /proc/cpuinfo | grep -m1 name | cut -f 2 -d ':' | xargs)\" && \\");
             sb.AppendLine($"write_ts ScriptEnd && \\");
+
             sb.AppendLine($"docker run --rm {volumeMountsOption} {blobxferImageName} upload --storage-url \"{metricsUrl}\" --local-path \"{metricsPath}\" --rename --no-recursive");
 
             var batchScriptPath = $"{batchExecutionDirectoryPath}/{BatchScriptFileName}";
@@ -1209,6 +1215,7 @@ namespace TesApi.Web
                             ExecutorDurationInSeconds = GetDurationInSeconds(metrics, "ExecutorStart", "ExecutorEnd"),
                             FileUploadDurationInSeconds = GetDurationInSeconds(metrics, "UploadStart", "UploadEnd"),
                             FileUploadSizeInGB = TryGetValueAsDouble(metrics, "FileUploadSizeInBytes", out var fileUploadSizeInBytes) ? fileUploadSizeInBytes / bytesInGB : (double?)null,
+                            DisFileSystemType = metrics.GetValueOrDefault("DiskFileSystem"),
                             DiskSizeInGB = diskSizeInGB,
                             DiskUsedInGB = diskUsedInGB,
                             DiskUsedPercent = diskUsedInGB.HasValue && diskSizeInGB.HasValue && diskSizeInGB > 0 ? (float?)(diskUsedInGB / diskSizeInGB * 100 ) : null,
