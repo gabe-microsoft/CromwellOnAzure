@@ -69,6 +69,14 @@ namespace TesApi.Web
         /// </summary>
         public ComputeNodeState? NodeState { get; set; }
         /// <summary>
+        /// Time that the compute node was allocated to the pool.
+        /// </summary>
+        public DateTime? NodeAllocationTime { get; set; }
+        /// <summary>
+        /// Time of the last boot for the compute node.
+        /// </summary>
+        public DateTime? NodeBootTime { get; set; }
+        /// <summary>
         /// Gets the current state of the Azure Batch task.
         /// </summary>
         public TaskState? TaskState { get; set; }

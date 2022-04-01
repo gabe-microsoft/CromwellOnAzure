@@ -290,6 +290,8 @@ namespace TesApi.Web
                 IEnumerable<string> nodeErrorDetails = null;
                 var activeJobWithMissingAutoPool = false;
                 ComputeNodeState? nodeState = null;
+                DateTime? nodeAllocationTime = null;
+                DateTime? nodeBootTime = null;
                 TaskState? taskState = null;
                 TaskExecutionInformation taskExecutionInformation = null;
                 TaskStatistics taskStatistics = null;
@@ -340,6 +342,8 @@ namespace TesApi.Web
                         {
                             nodeId = node.Id;
                             nodeState = node.State;
+                            nodeAllocationTime = node.AllocationTime;
+                            nodeBootTime = node.LastBootTime;
                             var nodeError = node.Errors?.FirstOrDefault();
                             nodeErrorCode = nodeError?.Code;
                             nodeErrorDetails = nodeError?.ErrorDetails?.Select(e => e.Value);
@@ -381,6 +385,8 @@ namespace TesApi.Web
                     NodeErrorCode = nodeErrorCode,
                     NodeErrorDetails = nodeErrorDetails,
                     NodeState = nodeState,
+                    NodeAllocationTime = nodeAllocationTime,
+                    NodeBootTime = nodeBootTime,
                     JobState = job.State,
                     JobStartTime = job.ExecutionInformation?.StartTime,
                     JobEndTime = job.ExecutionInformation?.EndTime,

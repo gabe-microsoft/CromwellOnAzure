@@ -482,6 +482,8 @@ namespace TesApi.Web
                     tesTask.AddToEventLog($"Pool ID: {azureBatchJobAndTaskState.PoolId}", DateTimeOffset.UtcNow);
                     tesTask.AddToEventLog($"Node ID: {azureBatchJobAndTaskState.NodeId}", DateTimeOffset.UtcNow);
                     tesTask.AddToEventLog("Batch job start", azureBatchJobAndTaskState.JobStartTime);
+                    tesTask.AddToEventLog("Batch node allocation time", azureBatchJobAndTaskState.NodeAllocationTime);
+                    tesTask.AddToEventLog("Batch node boot time", azureBatchJobAndTaskState.NodeBootTime);
                     tesTask.AddToEventLog("Batch task start", azureBatchJobAndTaskState.TaskStartTime);
                     tesTask.AddToEventLog("Batch task end", azureBatchJobAndTaskState.TaskEndTime);
                     tesTask.AddToEventLog("Batch job end", azureBatchJobAndTaskState.JobEndTime);
