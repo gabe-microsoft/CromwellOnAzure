@@ -1224,6 +1224,29 @@ namespace TesApi.Web
 
                         taskStartTime = TryGetValueAsDateTimeOffset(metrics, "ScriptStart", out var startTime) ? (DateTimeOffset?)startTime : null;
                         taskEndTime = TryGetValueAsDateTimeOffset(metrics, "ScriptEnd", out var endTime) ? (DateTimeOffset?)endTime: null;
+
+                        // TODO(gabe): This is a hack to add timing info to Cosmos.
+                        DateTimeOffset dt;
+                        tesTask.AddToEventLog("Script start", TryGetValueAsDateTimeOffset(metrics, "ScriptStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Bash install start", TryGetValueAsDateTimeOffset(metrics, "BashInstallStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Bash install end", TryGetValueAsDateTimeOffset(metrics, "BashInstallEnd", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("DRS localizer docker pull start", TryGetValueAsDateTimeOffset(metrics, "CromwellDrsLocalizerPullStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("DRS localizer docker pull end", TryGetValueAsDateTimeOffset(metrics, "CromwellDrsLocalizerPullEnd", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("blobxfer docker pull start", TryGetValueAsDateTimeOffset(metrics, "BlobXferPullStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("blobxfer docker pull end", TryGetValueAsDateTimeOffset(metrics, "BlobXferPullEnd", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Executor docker pull start", TryGetValueAsDateTimeOffset(metrics, "ExecutorPullStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Executor docker pull end", TryGetValueAsDateTimeOffset(metrics, "ExecutorPullEnd", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("DRS localization start", TryGetValueAsDateTimeOffset(metrics, "DrsLocalizationStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("DRS localization end", TryGetValueAsDateTimeOffset(metrics, "DrsLocalizationEnd", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Download start", TryGetValueAsDateTimeOffset(metrics, "DownloadStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Download end", TryGetValueAsDateTimeOffset(metrics, "DownloadEnd", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Set file permissions start", TryGetValueAsDateTimeOffset(metrics, "SetPermissionsStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Set file permissions end", TryGetValueAsDateTimeOffset(metrics, "SetPermissionsEnd", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Executor start", TryGetValueAsDateTimeOffset(metrics, "ExecutorStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Executor end", TryGetValueAsDateTimeOffset(metrics, "ExecutorEnd", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Upload start", TryGetValueAsDateTimeOffset(metrics, "UploadStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Upload end", TryGetValueAsDateTimeOffset(metrics, "UploadEnd", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Script end", TryGetValueAsDateTimeOffset(metrics, "ScriptEnd", out dt) ? (DateTimeOffset?)dt : null);
                     }
                     catch (Exception ex)
                     {
