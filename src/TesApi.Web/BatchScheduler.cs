@@ -748,13 +748,11 @@ namespace TesApi.Web
             sb.AppendLine($"write_ts UploadEnd && \\");
 
             // Get local disk info (col 2: file system type, col 3: size in KiB, col 4 KiB used).
-            sb.AppendLine($"/bin/bash -c 'disk=( `df -kT /mnt | grep '/mnt$'` ) && echo DiskFileSystem=${{disk[1]}} >> /mnt{metricsPath} && echo DiskSizeInKiB=${{disk[2]}} >> /mnt{metricsPath} && echo DiskUsedInKiB=${{disk[3]}} >> /mnt{metricsPath}' && \\");
-
-            sb.AppendLine($"disk_info=$(df -kT | grep '/mnt$') && \\");
+            sb.AppendLine($"disk_info=$(df -kT | grep '/mnt$' | sed 's/\\s\\+/ /g') && \\");
             sb.AppendLine($"write_kv DiskInfo $disk_info && \\"); // TODO DEBUG
-            //sb.AppendLine($"write_kv DiskFileSystem \"$(echo \"$disk_info\" | cut -d ' ' -f 2)\" && \\");
-            //sb.AppendLine($"write_kv DiskSizeInKiB  \"$(echo \"$disk_info\" | cut -d ' ' -f 3)\" && \\");
-            //sb.AppendLine($"write_kv DiskUsedInKiB  \"$(echo \"$disk_info\" | cut -d ' ' -f 4)\" && \\");
+            sb.AppendLine($"write_kv DiskFileSystem \"$(echo \"$disk_info\" | cut -d ' ' -f 2)\" && \\");
+            sb.AppendLine($"write_kv DiskSizeInKiB  \"$(echo \"$disk_info\" | cut -d ' ' -f 3)\" && \\");
+            sb.AppendLine($"write_kv DiskUsedInKiB  \"$(echo \"$disk_info\" | cut -d ' ' -f 4)\" && \\");
             sb.AppendLine($"write_kv VmCpuModelName \"$(cat /proc/cpuinfo | grep -m1 name | cut -f 2 -d ':' | xargs)\" && \\");
             sb.AppendLine($"write_ts ScriptEnd && \\");
 
