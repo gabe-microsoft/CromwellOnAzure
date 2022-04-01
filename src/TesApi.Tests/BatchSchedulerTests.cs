@@ -450,7 +450,6 @@ DiskSizeInKiB=8000000
 DiskUsedInKiB=1000000
 FileDownloadSizeInBytes=2000000000
 FileUploadSizeInBytes=4000000000
-VmCpuModelName=Intel(R) Xeon(R) Platinum 8272CL CPU @ 2.60GHz
 ScriptEnd=2020-10-08T02:50:30+00:00";
 
             var azureProxyReturnValues = AzureProxyReturnValues.Defaults;
@@ -481,7 +480,6 @@ ScriptEnd=2020-10-08T02:50:30+00:00";
             Assert.AreEqual(12.5f, batchNodeMetrics.DiskUsedPercent);
             Assert.AreEqual(2, batchNodeMetrics.FileDownloadSizeInGB);
             Assert.AreEqual(4, batchNodeMetrics.FileUploadSizeInGB);
-            Assert.AreEqual("Intel(R) Xeon(R) Platinum 8272CL CPU @ 2.60GHz", batchNodeMetrics.VmCpuModelName);
 
             var executorLog = tesTask.GetOrAddTesTaskLog().GetOrAddExecutorLog();
             Assert.IsNotNull(executorLog);
