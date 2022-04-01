@@ -749,7 +749,6 @@ namespace TesApi.Web
 
             // Get local disk info (col 2: file system type, col 3: size in KiB, col 4 KiB used).
             sb.AppendLine($"disk_info=$(df -kT | grep '/mnt$' | sed 's/\\s\\+/ /g') && \\");
-            sb.AppendLine($"write_kv DiskInfo $disk_info && \\"); // TODO DEBUG
             sb.AppendLine($"write_kv DiskFileSystem \"$(echo \"$disk_info\" | cut -d ' ' -f 2)\" && \\");
             sb.AppendLine($"write_kv DiskSizeInKiB  \"$(echo \"$disk_info\" | cut -d ' ' -f 3)\" && \\");
             sb.AppendLine($"write_kv DiskUsedInKiB  \"$(echo \"$disk_info\" | cut -d ' ' -f 4)\" && \\");
