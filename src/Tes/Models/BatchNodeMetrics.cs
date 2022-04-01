@@ -6,6 +6,30 @@
     public class BatchNodeMetrics
     {
         /// <summary>
+        /// Total runtime of task script.
+        /// </summary>
+        [TesTaskLogMetadataKey("total_script_duration_sec")]
+        public double? TotalScriptRuntimeInSeconds { get; set; }
+
+        /// <summary>
+        /// Total duration of task preperation before downloading input data.
+        /// </summary>
+        [TesTaskLogMetadataKey("total_prep_duration_sec")]
+        public double? TotalPrepDurationInSeconds { get; set; }
+
+        /// <summary>
+        /// Bash install on docker-in-docker container duration
+        /// </summary>
+        [TesTaskLogMetadataKey("bash_install_duration_sec")]
+        public double? BashInstallDurationInSeconds { get; set; }
+
+        /// <summary>
+        /// CromwellDrsLocalizer docker image pull duration
+        /// </summary>
+        [TesTaskLogMetadataKey("drsloc_pull_duration_sec")]
+        public double? DrsLocalizerPullDurationInSeconds { get; set; }
+
+        /// <summary>
         /// BlobXfer docker image pull duration
         /// </summary>
         [TesTaskLogMetadataKey("blobxfer_pull_duration_sec")]
@@ -18,10 +42,22 @@
         public double? ExecutorImagePullDurationInSeconds { get; set; }
 
         /// <summary>
+        /// Cromwell DRS localization duration
+        /// </summary>
+        [TesTaskLogMetadataKey("drsloc_duration_sec")]
+        public double? DrsLocalizationDurationInSeconds { get; set; }
+
+        /// <summary>
         /// File download duration
         /// </summary>
         [TesTaskLogMetadataKey("download_duration_sec")]
         public double? FileDownloadDurationInSeconds { get; set; }
+
+        /// <summary>
+        /// Set file permissions (chmod) duration
+        /// </summary>
+        [TesTaskLogMetadataKey("setperms_duration_sec")]
+        public double? SetPermissionsDurationInSeconds { get; set; }
 
         /// <summary>
         /// Main command execution duration
@@ -52,6 +88,12 @@
         /// </summary>
         [TesTaskLogMetadataKey("file_upload_size_gb")]
         public double? FileUploadSizeInGB { get; set; }
+
+        /// <summary>
+        /// Toal disk size in GB
+        /// </summary>
+        [TesTaskLogMetadataKey("disk_size_gb")]
+        public double? DiskSizeInGB { get; set; }
 
         /// <summary>
         /// Disk space used in GB

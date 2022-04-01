@@ -683,10 +683,13 @@ namespace TesApi.Web
             sb.AppendLine($"write_kv() {{ echo \"$1=$2\" >> /mnt{metricsPath}; }} && \\");  // Function that appends key=value pair to metrics.txt file
             sb.AppendLine($"write_ts() {{ write_kv $1 $(date -Iseconds --utc); }} && \\");  // Function that appends key=<current datetime> to metrics.txt file
             sb.AppendLine($"mkdir -p /mnt{batchExecutionDirectoryPath} && \\");
+            sb.AppendLine($"write_ts ScriptStart && \\");
 
             if (dockerInDockerImageIsPublic)
             {
+                sb.AppendLine($"write_ts BashInstallStart && \\");
                 sb.AppendLine($"(grep -q alpine /etc/os-release && apk add bash || :) && \\");  // Install bash if running on alpine (will be the case if running inside "docker" image)
+                sb.AppendLine($"write_ts BashInstallEnd && \\");
             }
 
             var vmSize = task.Resources?.GetBackendParameterValue(TesResources.SupportedBackendParameters.vm_size);
@@ -734,7 +737,9 @@ namespace TesApi.Web
             sb.AppendLine($"write_ts DownloadStart && \\");
             sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint=/bin/sh {blobxferImageName} {downloadFilesScriptPath} && \\");
             sb.AppendLine($"write_ts DownloadEnd && \\");
+            sb.AppendLine($"write_ts SetPermissionsStart && \\");
             sb.AppendLine($"chmod -R o+rwx /mnt{cromwellPathPrefixWithoutEndSlash} && \\");
+            sb.AppendLine($"write_ts SetPermissionsEnd && \\");
             sb.AppendLine($"write_ts ExecutorStart && \\");
             sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint= --workdir / {executor.Image} {executor.Command[0]} -c \"{ string.Join(" && ", executor.Command.Skip(1))}\" && \\");
             sb.AppendLine($"write_ts ExecutorEnd && \\");
@@ -743,6 +748,7 @@ namespace TesApi.Web
             sb.AppendLine($"write_ts UploadEnd && \\");
             sb.AppendLine($"/bin/bash -c 'disk=( `df -k /mnt | tail -1` ) && echo DiskSizeInKiB=${{disk[1]}} >> /mnt{metricsPath} && echo DiskUsedInKiB=${{disk[2]}} >> /mnt{metricsPath}' && \\");
             sb.AppendLine($"write_kv VmCpuModelName \"$(cat /proc/cpuinfo | grep -m1 name | cut -f 2 -d ':' | xargs)\" && \\");
+            sb.AppendLine($"write_ts ScriptEnd && \\");
             sb.AppendLine($"docker run --rm {volumeMountsOption} {blobxferImageName} upload --storage-url \"{metricsUrl}\" --local-path \"{metricsPath}\" --rename --no-recursive");
 
             var batchScriptPath = $"{batchExecutionDirectoryPath}/{BatchScriptFileName}";
@@ -1189,21 +1195,28 @@ namespace TesApi.Web
 
                         batchNodeMetrics = new BatchNodeMetrics
                         {
+                            TotalScriptRuntimeInSeconds = GetDurationInSeconds(metrics, "ScriptStart", "ScriptEnd"),
+                            TotalPrepDurationInSeconds = GetDurationInSeconds(metrics, "ScriptStart", "DownloadStart"),
+                            BashInstallDurationInSeconds = GetDurationInSeconds(metrics, "BashInstallStart", "BashInstallEnd"),
+                            DrsLocalizerPullDurationInSeconds = GetDurationInSeconds(metrics, "CromwellDrsLocalizerPullStart", "CromwellDrsLocalizerPullEnd"),
                             BlobXferImagePullDurationInSeconds = GetDurationInSeconds(metrics, "BlobXferPullStart", "BlobXferPullEnd"),
                             ExecutorImagePullDurationInSeconds = GetDurationInSeconds(metrics, "ExecutorPullStart", "ExecutorPullEnd"),
                             ExecutorImageSizeInGB = TryGetValueAsDouble(metrics, "ExecutorImageSizeInBytes", out var executorImageSizeInBytes) ? executorImageSizeInBytes / bytesInGB : (double?)null,
+                            DrsLocalizationDurationInSeconds = GetDurationInSeconds(metrics, "DrsLocalizationStart", "DrsLocalizationEnd"),
                             FileDownloadDurationInSeconds = GetDurationInSeconds(metrics, "DownloadStart", "DownloadEnd"),
                             FileDownloadSizeInGB = TryGetValueAsDouble(metrics, "FileDownloadSizeInBytes", out var fileDownloadSizeInBytes) ? fileDownloadSizeInBytes / bytesInGB : (double?)null,
+                            SetPermissionsDurationInSeconds = GetDurationInSeconds(metrics, "SetPermissionsStart", "SetPermissionsEnd"),
                             ExecutorDurationInSeconds = GetDurationInSeconds(metrics, "ExecutorStart", "ExecutorEnd"),
                             FileUploadDurationInSeconds = GetDurationInSeconds(metrics, "UploadStart", "UploadEnd"),
                             FileUploadSizeInGB = TryGetValueAsDouble(metrics, "FileUploadSizeInBytes", out var fileUploadSizeInBytes) ? fileUploadSizeInBytes / bytesInGB : (double?)null,
+                            DiskSizeInGB = diskSizeInGB,
                             DiskUsedInGB = diskUsedInGB,
                             DiskUsedPercent = diskUsedInGB.HasValue && diskSizeInGB.HasValue && diskSizeInGB > 0 ? (float?)(diskUsedInGB / diskSizeInGB * 100 ) : null,
                             VmCpuModelName = metrics.GetValueOrDefault("VmCpuModelName")
                         };
 
-                        taskStartTime = TryGetValueAsDateTimeOffset(metrics, "BlobXferPullStart", out var startTime) ? (DateTimeOffset?)startTime : null;
-                        taskEndTime = TryGetValueAsDateTimeOffset(metrics, "UploadEnd", out var endTime) ? (DateTimeOffset?)endTime: null;
+                        taskStartTime = TryGetValueAsDateTimeOffset(metrics, "ScriptStart", out var startTime) ? (DateTimeOffset?)startTime : null;
+                        taskEndTime = TryGetValueAsDateTimeOffset(metrics, "ScriptEnd", out var endTime) ? (DateTimeOffset?)endTime: null;
                     }
                     catch (Exception ex)
                     {
