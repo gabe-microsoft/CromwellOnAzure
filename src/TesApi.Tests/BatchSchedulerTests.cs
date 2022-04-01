@@ -432,21 +432,26 @@ namespace TesApi.Tests
             var tesTask = GetTesTask();
 
             var metricsFileContent = @"
-                BlobXferPullStart=2020-10-08T02:30:39+00:00
-                BlobXferPullEnd=2020-10-08T02:31:39+00:00
-                ExecutorPullStart=2020-10-08T02:32:39+00:00
-                ExecutorPullEnd=2020-10-08T02:34:39+00:00
-                ExecutorImageSizeInBytes=3000000000
-                DownloadStart=2020-10-08T02:35:39+00:00
-                DownloadEnd=2020-10-08T02:38:39+00:00
-                ExecutorStart=2020-10-08T02:39:39+00:00
-                ExecutorEnd=2020-10-08T02:43:39+00:00
-                UploadStart=2020-10-08T02:44:39+00:00
-                UploadEnd=2020-10-08T02:49:39+00:00
-                DiskSizeInKiB=8000000
-                DiskUsedInKiB=1000000
-                FileDownloadSizeInBytes=2000000000
-                FileUploadSizeInBytes=4000000000".Replace(" ", string.Empty);
+ScriptStart=2020-10-08T02:30:30+00:00
+BlobXferPullStart=2020-10-08T02:30:39+00:00
+BlobXferPullEnd=2020-10-08T02:31:39+00:00
+ExecutorPullStart=2020-10-08T02:32:39+00:00
+ExecutorPullEnd=2020-10-08T02:34:39+00:00
+ExecutorImageSizeInBytes=3000000000
+DownloadStart=2020-10-08T02:35:39+00:00
+DownloadEnd=2020-10-08T02:38:39+00:00
+SetPermissionsStart=2020-10-08T02:38:39+00:00
+SetPermissionsEnd=2020-10-08T02:38:39+00:00
+ExecutorStart=2020-10-08T02:39:39+00:00
+ExecutorEnd=2020-10-08T02:43:39+00:00
+UploadStart=2020-10-08T02:44:39+00:00
+UploadEnd=2020-10-08T02:49:39+00:00
+DiskSizeInKiB=8000000
+DiskUsedInKiB=1000000
+FileDownloadSizeInBytes=2000000000
+FileUploadSizeInBytes=4000000000
+VmCpuModelName=Intel(R) Xeon(R) Platinum 8272CL CPU @ 2.60GHz
+ScriptEnd=2020-10-08T02:50:30+00:00";
 
             var azureProxyReturnValues = AzureProxyReturnValues.Defaults;
             azureProxyReturnValues.BatchJobAndTaskState = BatchJobAndTaskStates.TaskCompletedSuccessfully;
@@ -459,22 +464,28 @@ namespace TesApi.Tests
 
             var batchNodeMetrics = tesTask.GetOrAddTesTaskLog().BatchNodeMetrics;
             Assert.IsNotNull(batchNodeMetrics);
+            Assert.AreEqual(20 * 60, batchNodeMetrics.TotalScriptRuntimeInSeconds);
+            Assert.AreEqual(5 * 60 + 9, batchNodeMetrics.TotalPrepDurationInSeconds);
+            Assert.IsNull(batchNodeMetrics.BashInstallDurationInSeconds);
+            Assert.IsNull(batchNodeMetrics.DrsLocalizerPullDurationInSeconds);
             Assert.AreEqual(60, batchNodeMetrics.BlobXferImagePullDurationInSeconds);
             Assert.AreEqual(120, batchNodeMetrics.ExecutorImagePullDurationInSeconds);
             Assert.AreEqual(3, batchNodeMetrics.ExecutorImageSizeInGB);
+            Assert.IsNull(batchNodeMetrics.DrsLocalizationDurationInSeconds);
             Assert.AreEqual(180, batchNodeMetrics.FileDownloadDurationInSeconds);
+            Assert.AreEqual(0, batchNodeMetrics.SetPermissionsDurationInSeconds);
             Assert.AreEqual(240, batchNodeMetrics.ExecutorDurationInSeconds);
             Assert.AreEqual(300, batchNodeMetrics.FileUploadDurationInSeconds);
+            Assert.AreEqual(8.192, batchNodeMetrics.DiskSizeInGB);
             Assert.AreEqual(1.024, batchNodeMetrics.DiskUsedInGB);
             Assert.AreEqual(12.5f, batchNodeMetrics.DiskUsedPercent);
             Assert.AreEqual(2, batchNodeMetrics.FileDownloadSizeInGB);
             Assert.AreEqual(4, batchNodeMetrics.FileUploadSizeInGB);
+            Assert.AreEqual("Intel(R) Xeon(R) Platinum 8272CL CPU @ 2.60GHz", batchNodeMetrics.VmCpuModelName);
 
             var executorLog = tesTask.GetOrAddTesTaskLog().GetOrAddExecutorLog();
             Assert.IsNotNull(executorLog);
             Assert.AreEqual(0, executorLog.ExitCode);
-            Assert.AreEqual(DateTimeOffset.Parse("2020-10-08T02:30:39+00:00"), executorLog.StartTime);
-            Assert.AreEqual(DateTimeOffset.Parse("2020-10-08T02:49:39+00:00"), executorLog.EndTime);
         }
 
         [TestMethod]
