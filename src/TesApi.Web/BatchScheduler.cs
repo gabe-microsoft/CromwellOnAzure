@@ -681,7 +681,7 @@ namespace TesApi.Web
             var sb = new StringBuilder();
 
             sb.AppendLine($"write_kv() {{ echo \"$1=$2\" >> /mnt{metricsPath}; }} && \\");  // Function that appends key=value pair to metrics.txt file
-            sb.AppendLine($"write_ts() {{ write_kv $1 $(date -Iseconds); }} && \\");    // Function that appends key=<current datetime> to metrics.txt file
+            sb.AppendLine($"write_ts() {{ write_kv $1 $(date -Iseconds --utc); }} && \\");  // Function that appends key=<current datetime> to metrics.txt file
             sb.AppendLine($"mkdir -p /mnt{batchExecutionDirectoryPath} && \\");
 
             if (dockerInDockerImageIsPublic)
