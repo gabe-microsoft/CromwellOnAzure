@@ -481,6 +481,7 @@ namespace TesApi.Web
                     // TODO(gabe): This is a hack to add additional metadata to Cosmos.
                     tesTask.AddToEventLog($"Pool ID: {azureBatchJobAndTaskState.PoolId}", DateTimeOffset.UtcNow);
                     tesTask.AddToEventLog($"Node ID: {azureBatchJobAndTaskState.NodeId}", DateTimeOffset.UtcNow);
+                    tesTask.AddToEventLog("Batch pool creation", azureBatchJobAndTaskState.PoolCreationTime);
                     tesTask.AddToEventLog("Batch job start", azureBatchJobAndTaskState.JobStartTime);
                     tesTask.AddToEventLog("Batch node allocation time", azureBatchJobAndTaskState.NodeAllocationTime);
                     tesTask.AddToEventLog("Batch node boot time", azureBatchJobAndTaskState.NodeBootTime);

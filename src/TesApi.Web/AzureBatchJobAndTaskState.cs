@@ -30,6 +30,10 @@ namespace TesApi.Web
         /// </summary>
         public string PoolId { get; set; }
         /// <summary>
+        /// Time that the pool was created.
+        /// </summary>
+        public DateTime? PoolCreationTime { get; set; }
+        /// <summary>
         /// Node ID used for this task.
         /// </summary>
         public string NodeId { get; set; }

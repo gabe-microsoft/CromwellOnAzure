@@ -292,6 +292,7 @@ namespace TesApi.Web
                 ComputeNodeState? nodeState = null;
                 DateTime? nodeAllocationTime = null;
                 DateTime? nodeBootTime = null;
+                DateTime? poolCreateTime = null;
                 TaskState? taskState = null;
                 TaskExecutionInformation taskExecutionInformation = null;
                 TaskStatistics taskStatistics = null;
@@ -333,6 +334,7 @@ namespace TesApi.Web
                     if (pool is not null)
                     {
                         poolId = pool.Id;
+                        poolCreateTime = pool.CreationTime;
 
                         nodeAllocationFailed = pool.ResizeErrors?.Count > 0;
 
@@ -380,6 +382,7 @@ namespace TesApi.Web
                     ActiveJobWithMissingAutoPool = activeJobWithMissingAutoPool,
                     AttemptNumber = attemptNumber,
                     PoolId = poolId,
+                    PoolCreationTime = poolCreateTime,
                     NodeId = nodeId,
                     NodeAllocationFailed = nodeAllocationFailed,
                     NodeErrorCode = nodeErrorCode,
