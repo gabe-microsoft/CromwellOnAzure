@@ -755,7 +755,8 @@ namespace TesApi.Web
             sb.AppendLine($"write_kv VmCpuModelName \"$(cat /proc/cpuinfo | grep -m1 name | cut -f 2 -d ':' | xargs)\" && \\");
             sb.AppendLine($"write_ts ScriptEnd && \\");
 
-            sb.AppendLine($"docker run --rm {volumeMountsOption} {blobxferImageName} upload --storage-url \"{metricsUrl}\" --local-path \"{metricsPath}\" --rename --no-recursive");
+            // TODO DEBUG: let Azure batch upload metrics.txt
+            //sb.AppendLine($"docker run --rm {volumeMountsOption} {blobxferImageName} upload --storage-url \"{metricsUrl}\" --local-path \"{metricsPath}\" --rename --no-recursive");
 
             var batchScriptPath = $"{batchExecutionDirectoryPath}/{BatchScriptFileName}";
             await this.storageAccessProvider.UploadBlobAsync(batchScriptPath, sb.ToString());
@@ -768,10 +769,16 @@ namespace TesApi.Web
                 UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: ElevationLevel.Admin, scope: AutoUserScope.Pool)),
                 ResourceFiles = new List<ResourceFile> { ResourceFile.FromUrl(batchScriptSasUrl, $"/mnt{batchScriptPath}"), ResourceFile.FromUrl(downloadFilesScriptUrl, $"/mnt{downloadFilesScriptPath}"), ResourceFile.FromUrl(uploadFilesScriptSasUrl, $"/mnt{uploadFilesScriptPath}") },
                 OutputFiles = new List<OutputFile> {
+                    // Upload metrics.txt on task completion (success or failure).
                     new OutputFile(
-                        "../std*.txt",
+                        "metrics.txt",
                         new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
-                        new OutputFileUploadOptions(OutputFileUploadCondition.TaskFailure))
+                        new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
+                    // Upload stdout and stderr on task completion (success or failure).
+                    new OutputFile(
+                        "../std*",
+                        new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
+                        new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                 }
             };
 
