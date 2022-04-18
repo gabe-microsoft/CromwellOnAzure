@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System;
@@ -771,7 +771,7 @@ namespace TesApi.Web
                 OutputFiles = new List<OutputFile> {
                     // Upload metrics.txt on task completion (success or failure).
                     new OutputFile(
-                        "metrics.txt",
+                        metricsPath,
                         new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
                         new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                     // Upload stdout and stderr on task completion (success or failure).
