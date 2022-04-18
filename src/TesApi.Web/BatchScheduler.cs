@@ -779,6 +779,11 @@ namespace TesApi.Web
                         "../std*",
                         new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
                         new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
+                    // TODO DEBUG: Upload nonexistent file.
+                    new OutputFile(
+                        "agent-debug.log",
+                        new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
+                        new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                 }
             };
 
