@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System;
@@ -34,6 +34,7 @@ namespace TesApi.Web
         private const string UploadFilesScriptFileName = "upload_files_script";
         private const string DownloadFilesScriptFileName = "download_files_script";
         private const string startTaskScriptFilename = "start-task.sh";
+        private const string batchAgentDebugLogPath = "/mnt/batch/sys/logs/agent-debug.log";
         private static readonly string batchStartTaskLocalPathOnBatchNode = $"/mnt/batch/tasks/startup/wd/{startTaskScriptFilename}";
         private static readonly Regex queryStringRegex = new(@"[^\?.]*(\?.*)");
         private readonly string dockerInDockerImageName;
@@ -779,9 +780,9 @@ namespace TesApi.Web
                         "../std*",
                         new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
                         new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
-                    // TODO DEBUG: Upload nonexistent file.
+                    // Upload batch agent debug log on task completion (success or failure).
                     new OutputFile(
-                        "agent-debug.log",
+                        batchAgentDebugLogPath,
                         new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
                         new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                 }
