@@ -785,7 +785,9 @@ namespace TesApi.Web
                         batchAgentDebugLogPath,
                         new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
                         new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
-                }
+                },
+                // Ignore file upload errors.
+                ExitConditions = new ExitConditions() { FileUploadError = new ExitOptions() { JobAction = JobAction.None } }
             };
 
             if (poolHasContainerConfig)
