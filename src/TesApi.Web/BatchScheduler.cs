@@ -765,6 +765,21 @@ namespace TesApi.Web
             var batchScriptSasUrl = await this.storageAccessProvider.MapLocalPathToSasUrlAsync(batchScriptPath);
             var batchExecutionDirectorySasUrl = await this.storageAccessProvider.MapLocalPathToSasUrlAsync($"{batchExecutionDirectoryPath}", getContainerSas: true);
 
+            var noExitActions = new ExitOptions()
+            {
+                DependencyAction = DependencyAction.Satisfy,
+                JobAction = JobAction.None,
+            };
+            var strictExitActions = new ExitOptions()
+            {
+                DependencyAction = DependencyAction.Block,
+                JobAction = JobAction.Terminate,
+            };
+            var exitConditions = new ExitConditions()
+            {
+                Default = strictExitActions,
+                FileUploadError = noExitActions,
+            };
             var cloudTask = new CloudTask(taskId, $"/bin/sh /mnt{batchScriptPath}")
             {
                 UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: ElevationLevel.Admin, scope: AutoUserScope.Pool)),
@@ -787,7 +802,7 @@ namespace TesApi.Web
                         new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                 },
                 // Ignore file upload errors.
-                ExitConditions = new ExitConditions() { FileUploadError = new ExitOptions() { JobAction = JobAction.None } }
+                ExitConditions = exitConditions,
             };
 
             if (poolHasContainerConfig)
