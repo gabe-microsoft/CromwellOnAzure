@@ -770,14 +770,14 @@ namespace TesApi.Web
                 UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: ElevationLevel.Admin, scope: AutoUserScope.Pool)),
                 ResourceFiles = new List<ResourceFile> { ResourceFile.FromUrl(batchScriptSasUrl, $"/mnt{batchScriptPath}"), ResourceFile.FromUrl(downloadFilesScriptUrl, $"/mnt{downloadFilesScriptPath}"), ResourceFile.FromUrl(uploadFilesScriptSasUrl, $"/mnt{uploadFilesScriptPath}") },
                 OutputFiles = new List<OutputFile> {
-                    // Upload metrics.txt on task completion (success or failure).
-                    new OutputFile(
-                        metricsPath,
-                        new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
-                        new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                     // Upload stdout and stderr on task completion (success or failure).
                     new OutputFile(
                         "../std*",
+                        new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
+                        new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
+                    // Upload metrics.txt on task completion (success or failure).
+                    new OutputFile(
+                        metricsPath,
                         new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
                         new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                     // Upload batch agent debug log on task completion (success or failure).
