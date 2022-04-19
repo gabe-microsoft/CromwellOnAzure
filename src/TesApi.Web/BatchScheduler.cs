@@ -1,4 +1,4 @@
-﻿// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System;
@@ -757,9 +757,8 @@ namespace TesApi.Web
             sb.AppendLine($"write_ts ScriptEnd && \\");
 
             // TODO DEBUG: let Azure batch upload metrics.txt
-            sb.AppendLine($"echo \"metrics.txt path: {metricsPath}\" && \\");
             sb.AppendLine("echo \"pwd: $(pwd)\" && \\");
-            sb.AppendLine("echo \"ls -lhR\" && ls -lhR && \\");
+            sb.AppendLine($"echo \"ls -lhR {batchExecutionDirectoryPath}\" && ls -lhR {batchExecutionDirectoryPath} && \\");
             sb.AppendLine($"docker run --rm {volumeMountsOption} {blobxferImageName} upload --storage-url \"{metricsUrl}\" --local-path \"{metricsPath}\" --rename --no-recursive");
 
             var batchScriptPath = $"{batchExecutionDirectoryPath}/{BatchScriptFileName}";
@@ -779,10 +778,10 @@ namespace TesApi.Web
                         new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
                         new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                     // Upload metrics.txt on task completion (success or failure).
-                    //new OutputFile(
-                    //    metricsPath,
-                    //    new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
-                    //    new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
+                    new OutputFile(
+                        metricsPath,
+                        new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
+                        new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                     //// Upload batch agent debug log on task completion (success or failure).
                     //new OutputFile(
                     //    batchAgentDebugLogPath,
