@@ -758,7 +758,7 @@ namespace TesApi.Web
 
             // TODO DEBUG: let Azure batch upload metrics.txt
             sb.AppendLine("echo \"pwd: $(pwd)\" && \\");
-            sb.AppendLine($"echo \"ls -lhR {batchExecutionDirectoryPath}\" && ls -lhR {batchExecutionDirectoryPath} && \\");
+            sb.AppendLine($"echo \"ls -lhR /mnt{batchExecutionDirectoryPath}\" && ls -lhR /mnt{batchExecutionDirectoryPath} && \\");
             sb.AppendLine($"docker run --rm {volumeMountsOption} {blobxferImageName} upload --storage-url \"{metricsUrl}\" --local-path \"{metricsPath}\" --rename --no-recursive");
 
             var batchScriptPath = $"{batchExecutionDirectoryPath}/{BatchScriptFileName}";
@@ -779,7 +779,7 @@ namespace TesApi.Web
                         new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                     // Upload metrics.txt on task completion (success or failure).
                     new OutputFile(
-                        metricsPath,
+                        $"/mnt{metricsPath}",
                         new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
                         new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                     //// Upload batch agent debug log on task completion (success or failure).
