@@ -754,12 +754,10 @@ namespace TesApi.Web
             sb.AppendLine($"write_kv DiskSizeInKiB  \"$(echo \"$disk_info\" | cut -d ' ' -f 3)\" && \\");
             sb.AppendLine($"write_kv DiskUsedInKiB  \"$(echo \"$disk_info\" | cut -d ' ' -f 4)\" && \\");
             sb.AppendLine($"write_kv VmCpuModelName \"$(cat /proc/cpuinfo | grep -m1 name | cut -f 2 -d ':' | xargs)\" && \\");
-            sb.AppendLine($"write_ts ScriptEnd && \\");
+            sb.AppendLine($"write_ts ScriptEnd");
 
             // TODO DEBUG: let Azure batch upload metrics.txt
-            sb.AppendLine("echo \"pwd: $(pwd)\" && \\");
-            sb.AppendLine($"echo \"ls -lhR /mnt{batchExecutionDirectoryPath}\" && ls -lhR /mnt{batchExecutionDirectoryPath} && \\");
-            sb.AppendLine($"docker run --rm {volumeMountsOption} {blobxferImageName} upload --storage-url \"{metricsUrl}\" --local-path \"{metricsPath}\" --rename --no-recursive");
+            //sb.AppendLine($"docker run --rm {volumeMountsOption} {blobxferImageName} upload --storage-url \"{metricsUrl}\" --local-path \"{metricsPath}\" --rename --no-recursive");
 
             var batchScriptPath = $"{batchExecutionDirectoryPath}/{BatchScriptFileName}";
             await this.storageAccessProvider.UploadBlobAsync(batchScriptPath, sb.ToString());
@@ -783,10 +781,10 @@ namespace TesApi.Web
                         new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
                         new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                     //// Upload batch agent debug log on task completion (success or failure).
-                    //new OutputFile(
-                    //    batchAgentDebugLogPath,
-                    //    new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
-                    //    new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
+                    new OutputFile(
+                        batchAgentDebugLogPath,
+                        new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
+                        new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
                 },
             };
 
