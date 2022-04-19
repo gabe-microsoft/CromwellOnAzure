@@ -756,9 +756,6 @@ namespace TesApi.Web
             sb.AppendLine($"write_kv VmCpuModelName \"$(cat /proc/cpuinfo | grep -m1 name | cut -f 2 -d ':' | xargs)\" && \\");
             sb.AppendLine($"write_ts ScriptEnd");
 
-            // TODO DEBUG: let Azure batch upload metrics.txt
-            //sb.AppendLine($"docker run --rm {volumeMountsOption} {blobxferImageName} upload --storage-url \"{metricsUrl}\" --local-path \"{metricsPath}\" --rename --no-recursive");
-
             var batchScriptPath = $"{batchExecutionDirectoryPath}/{BatchScriptFileName}";
             await this.storageAccessProvider.UploadBlobAsync(batchScriptPath, sb.ToString());
 
@@ -780,7 +777,7 @@ namespace TesApi.Web
                         $"/mnt{metricsPath}",
                         new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
                         new OutputFileUploadOptions(OutputFileUploadCondition.TaskCompletion)),
-                    //// Upload batch agent debug log on task completion (success or failure).
+                    // Upload batch agent debug log on task completion (success or failure).
                     new OutputFile(
                         batchAgentDebugLogPath,
                         new OutputFileDestination(new OutputFileBlobContainerDestination(batchExecutionDirectorySasUrl)),
