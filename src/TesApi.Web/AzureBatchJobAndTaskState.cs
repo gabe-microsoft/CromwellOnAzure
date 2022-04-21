@@ -26,17 +26,9 @@ namespace TesApi.Web
         /// </summary>
         public int AttemptNumber { get; set; }
         /// <summary>
-        /// Pool ID used for this task.
-        /// </summary>
-        public string PoolId { get; set; }
-        /// <summary>
         /// Time that the pool was created.
         /// </summary>
         public DateTime? PoolCreationTime { get; set; }
-        /// <summary>
-        /// Node ID used for this task.
-        /// </summary>
-        public string NodeId { get; set; }
         /// <summary>
         /// The Batch service encountered an error while resizing
         ///     the pool or the pool's Microsoft.Azure.Batch.CloudPool.AllocationState
@@ -72,14 +64,6 @@ namespace TesApi.Web
         /// Gets the current state of the compute node.
         /// </summary>
         public ComputeNodeState? NodeState { get; set; }
-        /// <summary>
-        /// Time that the compute node was allocated to the pool.
-        /// </summary>
-        public DateTime? NodeAllocationTime { get; set; }
-        /// <summary>
-        /// Time of the last boot for the compute node.
-        /// </summary>
-        public DateTime? NodeBootTime { get; set; }
         /// <summary>
         /// Gets the current state of the Azure Batch task.
         /// </summary>
@@ -137,9 +121,5 @@ namespace TesApi.Web
         ///     equivilant to the error field returned by "docker inspect".
         /// </remarks>
         public string TaskContainerError { get; set; }
-        /// <summary>
-        /// Task resource usage statistics.
-        /// </summary>
-        public TaskStatistics TaskStatistics { get; set; }
     }
 }

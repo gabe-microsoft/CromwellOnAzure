@@ -6,16 +6,40 @@
     public class BatchNodeMetrics
     {
         /// <summary>
+        /// Batch pool ID.
+        /// </summary>
+        [TesTaskLogMetadataKey("pool_id")]
+        public string PoolID { get; set; }
+
+        /// <summary>
+        /// Compute node ID.
+        /// </summary>
+        [TesTaskLogMetadataKey("node_id")]
+        public string NodeID { get; set; }
+
+        /// <summary>
         /// Total runtime of task script.
         /// </summary>
         [TesTaskLogMetadataKey("total_script_duration_sec")]
         public double? TotalScriptRuntimeInSeconds { get; set; }
 
         /// <summary>
-        /// Total duration of task preperation before downloading input data.
+        /// Total duration of batch preperation from node allocation to task script start.
         /// </summary>
-        [TesTaskLogMetadataKey("total_prep_duration_sec")]
-        public double? TotalPrepDurationInSeconds { get; set; }
+        [TesTaskLogMetadataKey("total_batch_prep_duration_sec")]
+        public double? TotalBatchPrepDurationInSeconds { get; set; }
+
+        /// <summary>
+        /// Total duration of task preperation run in script, from script start to before downloading input data.
+        /// </summary>
+        [TesTaskLogMetadataKey("total_script_prep_duration_sec")]
+        public double? TotalScriptPrepDurationInSeconds { get; set; }
+
+        /// <summary>
+        /// Duration spent pulling docker images during Batch prep (before script is run).
+        /// </summary>
+        [TesTaskLogMetadataKey("batch_docker_pull_duration_sec")]
+        public double? BatchDockerPullDurationInSeconds { get; set; }
 
         /// <summary>
         /// Bash install on docker-in-docker container duration

@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System;
@@ -106,7 +106,6 @@ namespace TesApi.Web
                 var tesTaskLog = tesTask.GetOrAddTesTaskLog();
                 var tesTaskExecutorLog = tesTaskLog.GetOrAddExecutorLog();
 
-                // TODO(gabe): Add metadata to tesTask here.
                 tesTaskLog.BatchNodeMetrics = batchInfo.BatchNodeMetrics;
                 tesTaskLog.CromwellResultCode = batchInfo.CromwellRcCode;
                 tesTaskLog.EndTime = DateTime.UtcNow;
@@ -340,13 +339,13 @@ namespace TesApi.Web
                 }
 
                 var cloudTask = await ConvertTesTaskToBatchTaskAsync(tesTask, poolInformation?.AutoPoolSpecification?.PoolSpecification?.VirtualMachineConfiguration?.ContainerConfiguration is not null);
-                tesTask.AddToEventLog($"Requested new Batch job on pool: {poolInformation.PoolId}", DateTimeOffset.UtcNow);
+                tesTask.AddToEventLog("Requested new Batch job on pool", DateTimeOffset.UtcNow);
                 logger.LogInformation($"Creating batch job for TES task {tesTask.Id}. Using VM size {virtualMachineInfo.VmSize}.");
                 await azureProxy.CreateBatchJobAsync(jobId, cloudTask, poolInformation);
 
                 tesTaskLog.StartTime = DateTimeOffset.UtcNow;
                 tesTask.State = TesState.INITIALIZINGEnum;
-                tesTask.AddToEventLog("Batch job created", tesTaskLog.StartTime);
+                tesTask.AddToEventLog("Batch job scheduled", tesTaskLog.StartTime);
             }
             catch (AzureBatchQuotaMaxedOutException exception)
             {
@@ -479,26 +478,12 @@ namespace TesApi.Web
                 case TaskState.Completed:
                     var batchJobInfo = JsonConvert.SerializeObject(azureBatchJobAndTaskState);
 
-                    // TODO(gabe): This is a hack to add additional metadata to Cosmos.
-                    tesTask.AddToEventLog($"Pool ID: {azureBatchJobAndTaskState.PoolId}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Node ID: {azureBatchJobAndTaskState.NodeId}", DateTimeOffset.UtcNow);
+                    // Add timing info to Cosmos metadata.
                     tesTask.AddToEventLog("Batch pool creation", azureBatchJobAndTaskState.PoolCreationTime);
                     tesTask.AddToEventLog("Batch job start", azureBatchJobAndTaskState.JobStartTime);
-                    tesTask.AddToEventLog("Batch node allocation time", azureBatchJobAndTaskState.NodeAllocationTime);
-                    tesTask.AddToEventLog("Batch node boot time", azureBatchJobAndTaskState.NodeBootTime);
                     tesTask.AddToEventLog("Batch task start", azureBatchJobAndTaskState.TaskStartTime);
                     tesTask.AddToEventLog("Batch task end", azureBatchJobAndTaskState.TaskEndTime);
                     tesTask.AddToEventLog("Batch job end", azureBatchJobAndTaskState.JobEndTime);
-                    tesTask.AddToEventLog($"Stats start", azureBatchJobAndTaskState.TaskStatistics?.StartTime);
-                    tesTask.AddToEventLog($"Stats end", azureBatchJobAndTaskState.TaskStatistics?.LastUpdateTime);
-                    tesTask.AddToEventLog($"Stats: Wall Clock Time: {azureBatchJobAndTaskState.TaskStatistics?.WallClockTime}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: Wait Time: {azureBatchJobAndTaskState.TaskStatistics?.WaitTime}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: Kernel CPU Time: {azureBatchJobAndTaskState.TaskStatistics?.KernelCpuTime}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: User CPU Time: {azureBatchJobAndTaskState.TaskStatistics?.UserCpuTime}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: Read GiB: {azureBatchJobAndTaskState.TaskStatistics?.ReadIOGiB}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: Read IOPS: {azureBatchJobAndTaskState.TaskStatistics?.ReadIOps}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: Write GiB: {azureBatchJobAndTaskState.TaskStatistics?.WriteIOGiB}", DateTimeOffset.UtcNow);
-                    tesTask.AddToEventLog($"Stats: Write IOPS: {azureBatchJobAndTaskState.TaskStatistics?.WriteIOps}", DateTimeOffset.UtcNow);
 
                     if (azureBatchJobAndTaskState.TaskExitCode == 0 && azureBatchJobAndTaskState.TaskFailureInformation is null)
                     {
@@ -1184,6 +1169,46 @@ namespace TesApi.Web
                 return dict.TryGetValue(key, out var valueAsString) && double.TryParse(valueAsString, out result);
             }
 
+            // Return the first group ($1) from the first occurance of the specified regular expression (null if no match found).
+            static string GetFirstMatch(Regex pattern, string log)
+            {
+                return pattern.Match(log)?.Groups[1].Value;
+            }
+
+            static string GetISODateTimeFromWin32Timestamp(string win32TimestampStr)
+            {
+                return long.TryParse(win32TimestampStr, out var win32Time) ? DateTime.FromFileTimeUtc(win32Time).ToString("yyyy-MM-ddTHH:mm:ss.fffZ") : (string)null;
+            }
+
+            static string GetISODateTimeFromAgentLogTimestamp(string logTimestamp)
+            {
+                // Convert to ISO 8601 format that's parsable by DateTimeOffset.
+                return Regex.Replace(logTimestamp, @"(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})\.(\d{3})Z", "$1-$2-$3T$4:$5:$6.$7Z");
+            }
+
+            static bool TryAddToDictionary(string key, string val, Dictionary<string, string> dict)
+            {
+                if (val is null)
+                    return false;
+                dict[key] = val;
+                return true;
+            }
+
+            static Dictionary<string, string> AddAgentLogMetrics(Dictionary<string, string> metrics, string agentLog)
+            {
+                if (agentLog is null)
+                    return metrics;
+
+                TryAddToDictionary("PoolID", GetFirstMatch(new Regex("\"PoolName\":\"([^\"]+)\"", RegexOptions.RightToLeft), agentLog), metrics);
+                TryAddToDictionary("NodeID", GetFirstMatch(new Regex("\"TVMName\":\"([^\"]+)\"", RegexOptions.RightToLeft), agentLog), metrics);
+                TryAddToDictionary("NodeAlloc", GetISODateTimeFromWin32Timestamp(GetFirstMatch(new Regex("\"TVMAllocationTime\":\"(\\d+)\"", RegexOptions.RightToLeft), agentLog)), metrics);
+                TryAddToDictionary("NodeBoot", GetISODateTimeFromWin32Timestamp(GetFirstMatch(new Regex("\"TVMBootTime\":\"(\\d+)\"", RegexOptions.RightToLeft), agentLog)), metrics);
+                TryAddToDictionary("BatchDockerPullStart", GetISODateTimeFromAgentLogTimestamp(GetFirstMatch(new Regex(@"(\d{8}T\d{6}\.\d{3}Z).+pull_container_images_async.+Pulling image "), agentLog)), metrics);
+                TryAddToDictionary("BatchDockerPullEnd", GetISODateTimeFromAgentLogTimestamp(GetFirstMatch(new Regex(@"(\d{8}T\d{6}\.\d{3}Z).+pull_container_images_async.+pull images status: Status\.Ok"), agentLog)), metrics);
+
+                return metrics;
+            }
+
             BatchNodeMetrics batchNodeMetrics = null;
             DateTimeOffset? taskStartTime = null;
             DateTimeOffset? taskEndTime = null;
@@ -1199,20 +1224,27 @@ namespace TesApi.Web
                 }
 
                 var metricsContent = await this.storageAccessProvider.DownloadBlobAsync($"{GetBatchExecutionDirectoryPath(tesTask)}/metrics.txt");
+                var agentLogContent = await this.storageAccessProvider.DownloadBlobAsync($"{GetBatchExecutionDirectoryPath(tesTask)}/agent-debug.log");
 
-                if (metricsContent is not null)
+                // Parse metrics.
+                Dictionary<string, string> metrics = (metricsContent is not null) ? DelimitedTextToDictionary(metricsContent.Trim()) : new Dictionary<string, string>();
+                metrics = AddAgentLogMetrics(metrics, agentLogContent);
+
+                if (metrics.Count > 0)
                 {
                     try
                     {
-                        var metrics = DelimitedTextToDictionary(metricsContent.Trim());
-
                         var diskSizeInGB = TryGetValueAsDouble(metrics, "DiskSizeInKiB", out var diskSizeInKiB)  ? diskSizeInKiB / kiBInGB : (double?)null;
                         var diskUsedInGB = TryGetValueAsDouble(metrics, "DiskUsedInKiB", out var diskUsedInKiB) ? diskUsedInKiB / kiBInGB : (double?)null;
 
                         batchNodeMetrics = new BatchNodeMetrics
                         {
+                            PoolID = metrics.GetValueOrDefault("PoolID"),
+                            NodeID = metrics.GetValueOrDefault("NodeID"),
                             TotalScriptRuntimeInSeconds = GetDurationInSeconds(metrics, "ScriptStart", "ScriptEnd"),
-                            TotalPrepDurationInSeconds = GetDurationInSeconds(metrics, "ScriptStart", "DownloadStart"),
+                            TotalBatchPrepDurationInSeconds = GetDurationInSeconds(metrics, "NodeAlloc", "ScriptStart"),
+                            TotalScriptPrepDurationInSeconds = GetDurationInSeconds(metrics, "ScriptStart", "DownloadStart"),
+                            BatchDockerPullDurationInSeconds = GetDurationInSeconds(metrics, "BatchDockerPullStart", "BatchDockerPullEnd"),
                             BashInstallDurationInSeconds = GetDurationInSeconds(metrics, "BashInstallStart", "BashInstallEnd"),
                             DrsLocalizerPullDurationInSeconds = GetDurationInSeconds(metrics, "CromwellDrsLocalizerPullStart", "CromwellDrsLocalizerPullEnd"),
                             BlobXferImagePullDurationInSeconds = GetDurationInSeconds(metrics, "BlobXferPullStart", "BlobXferPullEnd"),
@@ -1235,8 +1267,12 @@ namespace TesApi.Web
                         taskStartTime = TryGetValueAsDateTimeOffset(metrics, "ScriptStart", out var startTime) ? (DateTimeOffset?)startTime : null;
                         taskEndTime = TryGetValueAsDateTimeOffset(metrics, "ScriptEnd", out var endTime) ? (DateTimeOffset?)endTime: null;
 
-                        // TODO(gabe): This is a hack to add timing info to Cosmos.
+                        // Add timing events to Cosmos.
                         DateTimeOffset dt;
+                        tesTask.AddToEventLog("Node allocation", TryGetValueAsDateTimeOffset(metrics, "NodeAlloc", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Node boot", TryGetValueAsDateTimeOffset(metrics, "NodeBoot", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Batch docker pull start", TryGetValueAsDateTimeOffset(metrics, "BatchDockerPullStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Batch docker pull end", TryGetValueAsDateTimeOffset(metrics, "BatchDockerPullEnd", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("Script start", TryGetValueAsDateTimeOffset(metrics, "ScriptStart", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("Bash install start", TryGetValueAsDateTimeOffset(metrics, "BashInstallStart", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("Bash install end", TryGetValueAsDateTimeOffset(metrics, "BashInstallEnd", out dt) ? (DateTimeOffset?)dt : null);

@@ -283,19 +283,14 @@ namespace TesApi.Web
         {
             try
             {
-                var poolId = "";
-                var nodeId = "";
                 var nodeAllocationFailed = false;
                 string nodeErrorCode = null;
                 IEnumerable<string> nodeErrorDetails = null;
                 var activeJobWithMissingAutoPool = false;
                 ComputeNodeState? nodeState = null;
-                DateTime? nodeAllocationTime = null;
-                DateTime? nodeBootTime = null;
                 DateTime? poolCreateTime = null;
                 TaskState? taskState = null;
                 TaskExecutionInformation taskExecutionInformation = null;
-                TaskStatistics taskStatistics = null;
 
                 var jobFilter = new ODATADetailLevel
                 {
@@ -333,7 +328,6 @@ namespace TesApi.Web
 
                     if (pool is not null)
                     {
-                        poolId = pool.Id;
                         poolCreateTime = pool.CreationTime;
 
                         nodeAllocationFailed = pool.ResizeErrors?.Count > 0;
@@ -342,10 +336,7 @@ namespace TesApi.Web
 
                         if (node is not null)
                         {
-                            nodeId = node.Id;
                             nodeState = node.State;
-                            nodeAllocationTime = node.AllocationTime;
-                            nodeBootTime = node.LastBootTime;
                             var nodeError = node.Errors?.FirstOrDefault();
                             nodeErrorCode = nodeError?.Code;
                             nodeErrorDetails = nodeError?.ErrorDetails?.Select(e => e.Value);
@@ -362,14 +353,9 @@ namespace TesApi.Web
 
                 try
                 {
-                    var taskFilter = new ODATADetailLevel
-                    {
-                        ExpandClause = "stats"
-                    };
-                    var batchTask = await batchClient.JobOperations.GetTaskAsync(job.Id, tesTaskId, taskFilter);
+                    var batchTask = await batchClient.JobOperations.GetTaskAsync(job.Id, tesTaskId);
                     taskState = batchTask.State;
                     taskExecutionInformation = batchTask.ExecutionInformation;
-                    taskStatistics = batchTask.Statistics;
                 }
                 catch (Exception ex)
                 {
@@ -381,15 +367,11 @@ namespace TesApi.Web
                     MoreThanOneActiveJobFound = false,
                     ActiveJobWithMissingAutoPool = activeJobWithMissingAutoPool,
                     AttemptNumber = attemptNumber,
-                    PoolId = poolId,
                     PoolCreationTime = poolCreateTime,
-                    NodeId = nodeId,
                     NodeAllocationFailed = nodeAllocationFailed,
                     NodeErrorCode = nodeErrorCode,
                     NodeErrorDetails = nodeErrorDetails,
                     NodeState = nodeState,
-                    NodeAllocationTime = nodeAllocationTime,
-                    NodeBootTime = nodeBootTime,
                     JobState = job.State,
                     JobStartTime = job.ExecutionInformation?.StartTime,
                     JobEndTime = job.ExecutionInformation?.EndTime,
@@ -402,7 +384,6 @@ namespace TesApi.Web
                     TaskFailureInformation = taskExecutionInformation?.FailureInformation,
                     TaskContainerState = taskExecutionInformation?.ContainerInformation?.State,
                     TaskContainerError = taskExecutionInformation?.ContainerInformation?.Error,
-                    TaskStatistics = taskStatistics
                 };
             }
             catch (Exception ex)
