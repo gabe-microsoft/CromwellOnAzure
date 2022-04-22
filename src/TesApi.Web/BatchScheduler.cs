@@ -1247,7 +1247,7 @@ namespace TesApi.Web
                             BatchDockerPullDurationInSeconds = GetDurationInSeconds(metrics, "BatchDockerPullStart", "BatchDockerPullEnd"),
                             BashInstallDurationInSeconds = GetDurationInSeconds(metrics, "BashInstallStart", "BashInstallEnd"),
                             DrsLocalizerPullDurationInSeconds = GetDurationInSeconds(metrics, "CromwellDrsLocalizerPullStart", "CromwellDrsLocalizerPullEnd"),
-                            BlobXferImagePullDurationInSeconds = GetDurationInSeconds(metrics, "BlobXferPullStart", "BlobXferPullEnd"),
+                            CopyUtilInstallDurationInSeconds = GetDurationInSeconds(metrics, "BlobXferPullStart", "BlobXferPullEnd"),
                             ExecutorImagePullDurationInSeconds = GetDurationInSeconds(metrics, "ExecutorPullStart", "ExecutorPullEnd"),
                             ExecutorImageSizeInGB = TryGetValueAsDouble(metrics, "ExecutorImageSizeInBytes", out var executorImageSizeInBytes) ? executorImageSizeInBytes / bytesInGB : (double?)null,
                             DrsLocalizationDurationInSeconds = GetDurationInSeconds(metrics, "DrsLocalizationStart", "DrsLocalizationEnd"),
@@ -1278,8 +1278,8 @@ namespace TesApi.Web
                         tesTask.AddToEventLog("Bash install end", TryGetValueAsDateTimeOffset(metrics, "BashInstallEnd", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("DRS localizer docker pull start", TryGetValueAsDateTimeOffset(metrics, "CromwellDrsLocalizerPullStart", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("DRS localizer docker pull end", TryGetValueAsDateTimeOffset(metrics, "CromwellDrsLocalizerPullEnd", out dt) ? (DateTimeOffset?)dt : null);
-                        tesTask.AddToEventLog("blobxfer docker pull start", TryGetValueAsDateTimeOffset(metrics, "BlobXferPullStart", out dt) ? (DateTimeOffset?)dt : null);
-                        tesTask.AddToEventLog("blobxfer docker pull end", TryGetValueAsDateTimeOffset(metrics, "BlobXferPullEnd", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Copyutil install start", TryGetValueAsDateTimeOffset(metrics, "BlobXferPullStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Copyutil install end", TryGetValueAsDateTimeOffset(metrics, "BlobXferPullEnd", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("Executor docker pull start", TryGetValueAsDateTimeOffset(metrics, "ExecutorPullStart", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("Executor docker pull end", TryGetValueAsDateTimeOffset(metrics, "ExecutorPullEnd", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("DRS localization start", TryGetValueAsDateTimeOffset(metrics, "DrsLocalizationStart", out dt) ? (DateTimeOffset?)dt : null);

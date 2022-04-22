@@ -54,10 +54,10 @@
         public double? DrsLocalizerPullDurationInSeconds { get; set; }
 
         /// <summary>
-        /// BlobXfer docker image pull duration
+        /// Copy utility install duration
         /// </summary>
-        [TesTaskLogMetadataKey("blobxfer_pull_duration_sec")]
-        public double? BlobXferImagePullDurationInSeconds { get; set; }
+        [TesTaskLogMetadataKey("copyutil_install_duration_sec")]
+        public double? CopyUtilInstallDurationInSeconds { get; set; }
 
         /// <summary>
         /// Executor docker image pull duration
