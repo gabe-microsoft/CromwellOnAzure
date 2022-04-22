@@ -673,10 +673,13 @@ namespace TesApi.Web
             sb.AppendLine($"mkdir -p /mnt{batchExecutionDirectoryPath} && \\");
             sb.AppendLine($"write_ts ScriptStart && \\");
 
+            // Install bash and GNU grep if running on alpine (will be the case if running inside "docker" image).
+            // GNU grep (which supports Perl-style regex) is needed to get the executor image.
+            // TODO: I don't think bash is needed anymore, but I'm leaving this in for now (just in case).
             if (dockerInDockerImageIsPublic)
             {
                 sb.AppendLine($"write_ts BashInstallStart && \\");
-                sb.AppendLine($"(grep -q alpine /etc/os-release && apk add bash || :) && \\");  // Install bash if running on alpine (will be the case if running inside "docker" image)
+                sb.AppendLine($"(grep -q alpine /etc/os-release && apk add bash && apk add grep || :) && \\");
                 sb.AppendLine($"write_ts BashInstallEnd && \\");
             }
 
