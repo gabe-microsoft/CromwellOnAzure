@@ -485,10 +485,10 @@ namespace TesApi.Web
                     tesTask.AddToEventLog("Batch task end", azureBatchJobAndTaskState.TaskEndTime);
                     tesTask.AddToEventLog("Batch job end", azureBatchJobAndTaskState.JobEndTime);
 
+                    var metrics = await GetBatchNodeMetricsAndCromwellResultCodeAsync(tesTask);
+
                     if (azureBatchJobAndTaskState.TaskExitCode == 0 && azureBatchJobAndTaskState.TaskFailureInformation is null)
                     {
-                        var metrics = await GetBatchNodeMetricsAndCromwellResultCodeAsync(tesTask);
-
                         return new CombinedBatchTaskInfo
                         {
                             BatchTaskState = BatchTaskState.CompletedSuccessfully,
@@ -510,6 +510,8 @@ namespace TesApi.Web
                             BatchTaskExitCode = azureBatchJobAndTaskState.TaskExitCode,
                             BatchTaskStartTime = azureBatchJobAndTaskState.TaskStartTime,
                             BatchTaskEndTime = azureBatchJobAndTaskState.TaskEndTime,
+                            BatchNodeMetrics = metrics.BatchNodeMetrics,
+                            CromwellRcCode = metrics.CromwellRcCode,
                             SystemLogItems = new[] { azureBatchJobAndTaskState.TaskFailureInformation?.Details?.FirstOrDefault()?.Value }
                         };
                     }
