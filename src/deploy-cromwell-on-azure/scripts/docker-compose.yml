@@ -25,7 +25,7 @@ services:
       - DisableBatchScheduling=$DisableBatchScheduling
       - BatchNodesSubnetId=$BatchNodesSubnetId
       - DockerInDockerImageName=$DockerInDockerImageName
-      - BlobxferImageName=$BlobxferImageName
+      - CopyUtilImageName=$CopyUtilImageName
       - DisableBatchNodesPublicIpAddress=$DisableBatchNodesPublicIpAddress
       - BatchImageOffer=$BatchImageOffer
       - BatchImagePublisher=$BatchImagePublisher

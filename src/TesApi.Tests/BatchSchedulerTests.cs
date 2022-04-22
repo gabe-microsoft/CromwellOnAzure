@@ -27,7 +27,7 @@ namespace TesApi.Tests
     [TestClass]
     public class BatchSchedulerTests
     {
-        private static readonly Regex downloadFilesBlobxferRegex = new(@"path='([^']*)' && url='([^']*)' && blobxfer download");
+        private static readonly Regex downloadBlobsRegex = new(@"path='([^']*)' && url='([^']*)' && blobxfer download");
         private static readonly Regex downloadFilesWgetRegex = new(@"path='([^']*)' && url='([^']*)' && mkdir .* wget");
 
         [TestCategory("TES 1.1")]
@@ -433,8 +433,8 @@ namespace TesApi.Tests
 
             var metricsFileContent = @"
 ScriptStart=2020-10-08T02:30:30+00:00
-BlobXferPullStart=2020-10-08T02:30:39+00:00
-BlobXferPullEnd=2020-10-08T02:31:39+00:00
+CopyUtilPullStart=2020-10-08T02:30:39+00:00
+CopyUtilPullEnd=2020-10-08T02:31:39+00:00
 ExecutorPullStart=2020-10-08T02:32:39+00:00
 ExecutorPullEnd=2020-10-08T02:34:39+00:00
 ExecutorImageSizeInBytes=3000000000
@@ -464,10 +464,10 @@ ScriptEnd=2020-10-08T02:50:30+00:00";
             var batchNodeMetrics = tesTask.GetOrAddTesTaskLog().BatchNodeMetrics;
             Assert.IsNotNull(batchNodeMetrics);
             Assert.AreEqual(20 * 60, batchNodeMetrics.TotalScriptRuntimeInSeconds);
-            Assert.AreEqual(5 * 60 + 9, batchNodeMetrics.TotalPrepDurationInSeconds);
+            Assert.AreEqual(5 * 60 + 9, batchNodeMetrics.TotalScriptPrepDurationInSeconds);
             Assert.IsNull(batchNodeMetrics.BashInstallDurationInSeconds);
             Assert.IsNull(batchNodeMetrics.DrsLocalizerPullDurationInSeconds);
-            Assert.AreEqual(60, batchNodeMetrics.BlobXferImagePullDurationInSeconds);
+            Assert.AreEqual(60, batchNodeMetrics.CopyUtilInstallDurationInSeconds);
             Assert.AreEqual(120, batchNodeMetrics.ExecutorImagePullDurationInSeconds);
             Assert.AreEqual(3, batchNodeMetrics.ExecutorImageSizeInGB);
             Assert.IsNull(batchNodeMetrics.DrsLocalizationDurationInSeconds);
@@ -938,7 +938,7 @@ ScriptEnd=2020-10-08T02:50:30+00:00";
                 return new List<FileToDownload>();
             }
 
-            var blobxferFilesToDownload = downloadFilesBlobxferRegex.Matches(downloadFilesScriptContent)
+            var blobsToDownload = downloadBlobsRegex.Matches(downloadFilesScriptContent)
                 .Cast<System.Text.RegularExpressions.Match>()
                 .Select(m => new FileToDownload { LocalPath = m.Groups[1].Value, StorageUrl = m.Groups[2].Value });
 
@@ -946,7 +946,7 @@ ScriptEnd=2020-10-08T02:50:30+00:00";
                 .Cast<System.Text.RegularExpressions.Match>()
                 .Select(m => new FileToDownload { LocalPath = m.Groups[1].Value, StorageUrl = m.Groups[2].Value });
 
-            return blobxferFilesToDownload.Union(wgetFilesToDownload);
+            return blobsToDownload.Union(wgetFilesToDownload);
         }
 
         private struct BatchJobAndTaskStates

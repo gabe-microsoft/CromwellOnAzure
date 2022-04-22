@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+﻿// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 using System;
@@ -61,7 +61,7 @@ namespace TesApi.Web
             string executorImage,
             BatchNodeInfo nodeInfo,
             string dockerInDockerImageName,
-            string blobxferImageName,
+            string copyUtilImageName,
             string identityResourceId,
             bool disableBatchNodesPublicIpAddress,
             string batchNodesSubnetId,

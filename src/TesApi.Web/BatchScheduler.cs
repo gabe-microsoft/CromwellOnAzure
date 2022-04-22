@@ -38,7 +38,7 @@ namespace TesApi.Web
         private static readonly string batchStartTaskLocalPathOnBatchNode = $"/mnt/batch/tasks/startup/wd/{startTaskScriptFilename}";
         private static readonly Regex queryStringRegex = new(@"[^\?.]*(\?.*)");
         private readonly string dockerInDockerImageName;
-        private readonly string blobxferImageName;
+        private readonly string copyUtilImageName;
         private readonly string cromwellDrsLocalizerImageName;
         private readonly ILogger logger;
         private readonly IAzureProxy azureProxy;
@@ -74,7 +74,7 @@ namespace TesApi.Web
             this.usePreemptibleVmsOnly = GetBoolValue(configuration, "UsePreemptibleVmsOnly", false);
             this.batchNodesSubnetId = GetStringValue(configuration, "BatchNodesSubnetId", string.Empty);
             this.dockerInDockerImageName = GetStringValue(configuration, "DockerInDockerImageName", "docker");
-            this.blobxferImageName = GetStringValue(configuration, "BlobxferImageName", "mcr.microsoft.com/blobxfer");
+            this.copyUtilImageName = GetStringValue(configuration, "CopyUtilImageName", "mcr.microsoft.com/blobxfer");
             this.cromwellDrsLocalizerImageName = GetStringValue(configuration, "CromwellDrsLocalizerImageName", "broadinstitute/cromwell-drs-localizer:develop");
             this.disableBatchNodesPublicIpAddress = GetBoolValue(configuration, "DisableBatchNodesPublicIpAddress", false);
             //this.defaultStorageAccountName = GetStringValue(configuration, "DefaultStorageAccountName", string.Empty);
@@ -323,7 +323,7 @@ namespace TesApi.Web
                         executorImage: dockerImage,
                         nodeInfo: batchNodeInfo,
                         dockerInDockerImageName: dockerInDockerImageName,
-                        blobxferImageName: blobxferImageName,
+                        copyUtilImageName: copyUtilImageName,
                         identityResourceId: identityResourceId,
                         disableBatchNodesPublicIpAddress: disableBatchNodesPublicIpAddress,
                         batchNodesSubnetId: batchNodesSubnetId,
@@ -664,7 +664,7 @@ namespace TesApi.Web
 
             var executorImageIsPublic = (await azureProxy.GetContainerRegistryInfoAsync(executor.Image)) is null;
             var dockerInDockerImageIsPublic = (await azureProxy.GetContainerRegistryInfoAsync(dockerInDockerImageName)) is null;
-            var blobXferImageIsPublic = (await azureProxy.GetContainerRegistryInfoAsync(blobxferImageName)) is null;
+            var copyUtilImageIsPublic = (await azureProxy.GetContainerRegistryInfoAsync(copyUtilImageName)) is null;
 
             var sb = new StringBuilder();
 
@@ -692,11 +692,11 @@ namespace TesApi.Web
                 sb.AppendLine($"write_ts CromwellDrsLocalizerPullEnd && \\");
             }
 
-            if (blobXferImageIsPublic)
+            if (copyUtilImageIsPublic)
             {
-                sb.AppendLine($"write_ts BlobXferPullStart && \\");
-                sb.AppendLine($"docker pull --quiet {blobxferImageName} && \\");
-                sb.AppendLine($"write_ts BlobXferPullEnd && \\");
+                sb.AppendLine($"write_ts CopyUtilPullStart && \\");
+                sb.AppendLine($"docker pull --quiet {copyUtilImageName} && \\");
+                sb.AppendLine($"write_ts CopyUtilPullEnd && \\");
             }
 
             if (executorImageIsPublic)
@@ -726,7 +726,7 @@ namespace TesApi.Web
             }
 
             sb.AppendLine($"write_ts DownloadStart && \\");
-            sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint=/bin/sh {blobxferImageName} {downloadFilesScriptPath} && \\");
+            sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint=/bin/sh {copyUtilImageName} {downloadFilesScriptPath} && \\");
             sb.AppendLine($"write_ts DownloadEnd && \\");
             sb.AppendLine($"write_ts SetPermissionsStart && \\");
             sb.AppendLine($"chmod -R o+rwx /mnt{cromwellPathPrefixWithoutEndSlash} && \\");
@@ -735,7 +735,7 @@ namespace TesApi.Web
             sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint= --workdir / {executor.Image} {executor.Command[0]} -c \"{ string.Join(" && ", executor.Command.Skip(1))}\" && \\");
             sb.AppendLine($"write_ts ExecutorEnd && \\");
             sb.AppendLine($"write_ts UploadStart && \\");
-            sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint=/bin/sh {blobxferImageName} {uploadFilesScriptPath} && \\");
+            sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint=/bin/sh {copyUtilImageName} {uploadFilesScriptPath} && \\");
             sb.AppendLine($"write_ts UploadEnd && \\");
 
             // Get local disk info (col 2: file system type, col 3: size in KiB, col 4 KiB used).
@@ -899,7 +899,7 @@ namespace TesApi.Web
                 // Doing this also requires that the main task runs inside a container, hence downloading the "docker" image (contains docker client) as well.
                 vmConfig.ContainerConfiguration = new ContainerConfiguration
                 {
-                    ContainerImageNames = new List<string> { executorImage, dockerInDockerImageName, blobxferImageName },
+                    ContainerImageNames = new List<string> { executorImage, dockerInDockerImageName, copyUtilImageName },
                     ContainerRegistries = new List<ContainerRegistry> { containerRegistry }
                 };
 
@@ -915,14 +915,14 @@ namespace TesApi.Web
                     vmConfig.ContainerConfiguration.ContainerRegistries.Add(containerRegistryForDockerInDocker);
                 }
 
-                var containerRegistryInfoForBlobXfer = await azureProxy.GetContainerRegistryInfoAsync(blobxferImageName);
+                var containerRegistryInfoForCopyUtil = await azureProxy.GetContainerRegistryInfoAsync(copyUtilImageName);
 
-                if (containerRegistryInfoForBlobXfer is not null && containerRegistryInfoForBlobXfer.RegistryServer != containerRegistryInfo.RegistryServer && containerRegistryInfoForBlobXfer.RegistryServer != containerRegistryInfoForDockerInDocker.RegistryServer)
+                if (containerRegistryInfoForCopyUtil is not null && containerRegistryInfoForCopyUtil.RegistryServer != containerRegistryInfo.RegistryServer && containerRegistryInfoForCopyUtil.RegistryServer != containerRegistryInfoForDockerInDocker.RegistryServer)
                 {
                     vmConfig.ContainerConfiguration.ContainerRegistries.Add(new(
-                        userName: containerRegistryInfoForBlobXfer.Username,
-                        registryServer: containerRegistryInfoForBlobXfer.RegistryServer,
-                        password: containerRegistryInfoForBlobXfer.Password));
+                        userName: containerRegistryInfoForCopyUtil.Username,
+                        registryServer: containerRegistryInfoForCopyUtil.RegistryServer,
+                        password: containerRegistryInfoForCopyUtil.Password));
                 }
             }
 
@@ -1252,7 +1252,7 @@ namespace TesApi.Web
                             BatchDockerPullDurationInSeconds = GetDurationInSeconds(metrics, "BatchDockerPullStart", "BatchDockerPullEnd"),
                             BashInstallDurationInSeconds = GetDurationInSeconds(metrics, "BashInstallStart", "BashInstallEnd"),
                             DrsLocalizerPullDurationInSeconds = GetDurationInSeconds(metrics, "CromwellDrsLocalizerPullStart", "CromwellDrsLocalizerPullEnd"),
-                            CopyUtilInstallDurationInSeconds = GetDurationInSeconds(metrics, "BlobXferPullStart", "BlobXferPullEnd"),
+                            CopyUtilInstallDurationInSeconds = GetDurationInSeconds(metrics, "CopyUtilPullStart", "CopyUtilPullEnd"),
                             ExecutorImagePullDurationInSeconds = GetDurationInSeconds(metrics, "ExecutorPullStart", "ExecutorPullEnd"),
                             ExecutorImageSizeInGB = TryGetValueAsDouble(metrics, "ExecutorImageSizeInBytes", out var executorImageSizeInBytes) ? executorImageSizeInBytes / bytesInGB : (double?)null,
                             DrsLocalizationDurationInSeconds = GetDurationInSeconds(metrics, "DrsLocalizationStart", "DrsLocalizationEnd"),
@@ -1283,8 +1283,8 @@ namespace TesApi.Web
                         tesTask.AddToEventLog("Bash install end", TryGetValueAsDateTimeOffset(metrics, "BashInstallEnd", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("DRS localizer docker pull start", TryGetValueAsDateTimeOffset(metrics, "CromwellDrsLocalizerPullStart", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("DRS localizer docker pull end", TryGetValueAsDateTimeOffset(metrics, "CromwellDrsLocalizerPullEnd", out dt) ? (DateTimeOffset?)dt : null);
-                        tesTask.AddToEventLog("Copyutil install start", TryGetValueAsDateTimeOffset(metrics, "BlobXferPullStart", out dt) ? (DateTimeOffset?)dt : null);
-                        tesTask.AddToEventLog("Copyutil install end", TryGetValueAsDateTimeOffset(metrics, "BlobXferPullEnd", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Copyutil install start", TryGetValueAsDateTimeOffset(metrics, "CopyUtilPullStart", out dt) ? (DateTimeOffset?)dt : null);
+                        tesTask.AddToEventLog("Copyutil install end", TryGetValueAsDateTimeOffset(metrics, "CopyUtilPullEnd", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("Executor docker pull start", TryGetValueAsDateTimeOffset(metrics, "ExecutorPullStart", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("Executor docker pull end", TryGetValueAsDateTimeOffset(metrics, "ExecutorPullEnd", out dt) ? (DateTimeOffset?)dt : null);
                         tesTask.AddToEventLog("DRS localization start", TryGetValueAsDateTimeOffset(metrics, "DrsLocalizationStart", out dt) ? (DateTimeOffset?)dt : null);

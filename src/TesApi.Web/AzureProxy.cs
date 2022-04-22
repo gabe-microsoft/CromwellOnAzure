@@ -827,7 +827,7 @@ namespace TesApi.Web
         /// <param name="executorImage">The image required by the TesTask</param>
         /// <param name="nodeInfo">Information about the pool to be created</param>
         /// <param name="dockerInDockerImageName">Image that contains Docker to download private images</param>
-        /// <param name="blobxferImageName">Image name for blobxfer, the Azure storage transfer tool</param>
+        /// <param name="copyUtilImageName">Image name for the Azure storage transfer tool</param>
         /// <param name="identityResourceId">The resource ID of a user-assigned managed identity to assign to the pool</param>
         /// <param name="disableBatchNodesPublicIpAddress">True to remove the public IP address of the Batch node</param>
         /// <param name="batchNodesSubnetId">The subnet ID of the Batch VM in the pool</param>
@@ -841,7 +841,7 @@ namespace TesApi.Web
             string executorImage, 
             BatchNodeInfo nodeInfo,
             string dockerInDockerImageName, 
-            string blobxferImageName, 
+            string copyUtilImageName, 
             string identityResourceId, 
             bool disableBatchNodesPublicIpAddress, 
             string batchNodesSubnetId,
@@ -887,7 +887,7 @@ namespace TesApi.Web
                     // Doing this also requires that the main task runs inside a container, hence downloading the "docker" image (contains docker client) as well.
                     vmConfigManagement.ContainerConfiguration = new Microsoft.Azure.Management.Batch.Models.ContainerConfiguration
                     {
-                        ContainerImageNames = new List<string> { executorImage, dockerInDockerImageName, blobxferImageName },
+                        ContainerImageNames = new List<string> { executorImage, dockerInDockerImageName, copyUtilImageName },
                         ContainerRegistries = new List<Microsoft.Azure.Management.Batch.Models.ContainerRegistry> { containerRegistryMgmt }
                     };
 
@@ -903,16 +903,16 @@ namespace TesApi.Web
                         vmConfigManagement.ContainerConfiguration.ContainerRegistries.Add(containerRegistryForDockerInDockerMgmt);
                     }
 
-                    var containerRegistryInfoForBlobXfer = await GetContainerRegistryInfoAsync(blobxferImageName);
+                    var containerRegistryInfoForCopyUtil = await GetContainerRegistryInfoAsync(copyUtilImageName);
 
-                    if (containerRegistryInfoForBlobXfer is not null && containerRegistryInfoForBlobXfer.RegistryServer != containerRegistryInfo.RegistryServer && containerRegistryInfoForBlobXfer.RegistryServer != containerRegistryInfoForDockerInDocker.RegistryServer)
+                    if (containerRegistryInfoForCopyUtil is not null && containerRegistryInfoForCopyUtil.RegistryServer != containerRegistryInfo.RegistryServer && containerRegistryInfoForCopyUtil.RegistryServer != containerRegistryInfoForDockerInDocker.RegistryServer)
                     {
-                        var containerRegistryForBlobXferMgmt = new Microsoft.Azure.Management.Batch.Models.ContainerRegistry(
-                            userName: containerRegistryInfoForBlobXfer.Username,
-                            registryServer: containerRegistryInfoForBlobXfer.RegistryServer,
-                            password: containerRegistryInfoForBlobXfer.Password);
+                        var containerRegistryForCopyUtilMgmt = new Microsoft.Azure.Management.Batch.Models.ContainerRegistry(
+                            userName: containerRegistryInfoForCopyUtil.Username,
+                            registryServer: containerRegistryInfoForCopyUtil.RegistryServer,
+                            password: containerRegistryInfoForCopyUtil.Password);
 
-                        vmConfigManagement.ContainerConfiguration.ContainerRegistries.Add(containerRegistryForBlobXferMgmt);
+                        vmConfigManagement.ContainerConfiguration.ContainerRegistries.Add(containerRegistryForCopyUtilMgmt);
                     }
                 }
 

@@ -861,7 +861,7 @@ namespace CromwellOnAzureDeployer
         {
             await HandleConfigurationPropertyAsync(sshConnectionInfo, "BatchNodesSubnetId", configuration.BatchNodesSubnetId, "env-08-batch-nodes-subnet-id.txt");
             await HandleConfigurationPropertyAsync(sshConnectionInfo, "DockerInDockerImageName", configuration.DockerInDockerImageName, "env-09-docker-in-docker-image-name.txt");
-            await HandleConfigurationPropertyAsync(sshConnectionInfo, "BlobxferImageName", configuration.BlobxferImageName, "env-10-blobxfer-image-name.txt");
+            await HandleConfigurationPropertyAsync(sshConnectionInfo, "CopyUtilImageName", configuration.CopyUtilImageName, "env-10-copy-util-image-name.txt");
             await HandleConfigurationPropertyAsync(sshConnectionInfo, "DisableBatchNodesPublicIpAddress", configuration.DisableBatchNodesPublicIpAddress, "env-11-disable-batch-nodes-public-ip-address.txt");
         }
 
