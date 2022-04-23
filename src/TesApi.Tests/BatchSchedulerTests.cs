@@ -27,9 +27,6 @@ namespace TesApi.Tests
     [TestClass]
     public class BatchSchedulerTests
     {
-        private static readonly Regex downloadBlobsRegex = new(@"^blob_download '([^']*)' '([^']*)'$");
-        private static readonly Regex downloadFilesWgetRegex = new(@"^web_download '([^']*)' '([^']*)'$");
-
         [TestCategory("TES 1.1")]
         [TestMethod]
         public async Task BackendParametersVmSizeShallOverrideVmSelection()
@@ -938,12 +935,13 @@ ScriptEnd=2020-10-08T02:50:30+00:00";
                 return new List<FileToDownload>();
             }
 
-            var blobsToDownload = downloadBlobsRegex.Matches(downloadFilesScriptContent)
-                .Cast<System.Text.RegularExpressions.Match>()
+            var matches = new Regex(@"^blob_download '([^']+)' '([^']+)'\s*$", RegexOptions.Multiline).Matches(downloadFilesScriptContent);
+
+            var blobsToDownload = new Regex(@"^blob_download '([^']+)' '([^']+)'\s*$", RegexOptions.Multiline).Matches(downloadFilesScriptContent)
                 .Select(m => new FileToDownload { LocalPath = m.Groups[2].Value, StorageUrl = m.Groups[1].Value });
 
-            var wgetFilesToDownload = downloadFilesWgetRegex.Matches(downloadFilesScriptContent)
-                .Cast<System.Text.RegularExpressions.Match>()
+            var wgetFilesToDownload = new Regex(@"^web_download '([^']+)' '([^']+)'\s*$", RegexOptions.Multiline).Matches(downloadFilesScriptContent)
+                  .Cast<System.Text.RegularExpressions.Match>()
                 .Select(m => new FileToDownload { LocalPath = m.Groups[2].Value, StorageUrl = m.Groups[1].Value });
 
             return blobsToDownload.Union(wgetFilesToDownload);
