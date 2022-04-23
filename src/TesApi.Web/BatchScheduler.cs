@@ -30,9 +30,9 @@ namespace TesApi.Web
         private const string CromwellPathPrefix = "/cromwell-executions/";
         private const string CromwellScriptFileName = "script";
         private const string BatchExecutionDirectoryName = "__batch";
-        private const string BatchScriptFileName = "batch_script";
-        private const string UploadFilesScriptFileName = "upload_files_script";
-        private const string DownloadFilesScriptFileName = "download_files_script";
+        private const string BatchScriptFileName = "task.sh";
+        private const string UploadFilesScriptFileName = "upload_files.sh";
+        private const string DownloadFilesScriptFileName = "download_files.sh";
         private const string startTaskScriptFilename = "start-task.sh";
         private const string batchAgentDebugLogPath = "/mnt/batch/sys/logs/agent-debug.log";
         private static readonly string batchStartTaskLocalPathOnBatchNode = $"/mnt/batch/tasks/startup/wd/{startTaskScriptFilename}";
@@ -74,7 +74,7 @@ namespace TesApi.Web
             this.usePreemptibleVmsOnly = GetBoolValue(configuration, "UsePreemptibleVmsOnly", false);
             this.batchNodesSubnetId = GetStringValue(configuration, "BatchNodesSubnetId", string.Empty);
             this.dockerInDockerImageName = GetStringValue(configuration, "DockerInDockerImageName", "docker");
-            this.copyUtilImageName = GetStringValue(configuration, "CopyUtilImageName", "mcr.microsoft.com/blobxfer");
+            this.copyUtilImageName = GetStringValue(configuration, "CopyUtilImageName", "wdltest.azurecr.io/azcopy:10.14.1-alpine"); // TODO: publish this image somewhere more public (MCR).
             this.cromwellDrsLocalizerImageName = GetStringValue(configuration, "CromwellDrsLocalizerImageName", "broadinstitute/cromwell-drs-localizer:develop");
             this.disableBatchNodesPublicIpAddress = GetBoolValue(configuration, "DisableBatchNodesPublicIpAddress", false);
             //this.defaultStorageAccountName = GetStringValue(configuration, "DefaultStorageAccountName", string.Empty);
@@ -618,24 +618,40 @@ namespace TesApi.Web
                 .Union(additionalInputFiles)
                 .Select(async f => await GetTesInputFileUrl(f, task.Id, queryStringsToRemoveFromLocalFilePaths)));
 
-            const string exitIfDownloadedFileIsNotFound = "{ [ -f \"$path\" ] && : || { echo \"Failed to download file $url\" 1>&2 && exit 1; } }";
-            const string incrementTotalBytesTransferred = "total_bytes=$(( $total_bytes + `stat -c %s \"$path\"` ))";
-
-            // Using --include and not using --no-recursive as a workaround for https://github.com/Azure/blobxfer/issues/123
-            var downloadFilesScriptContent = "total_bytes=0 && "
-                + string.Join(" && ", filesToDownload.Select(f => {
-                    var setVariables = $"path='{f.Path}' && url='{f.Url}'";
-
-                    var downloadSingleFile = f.Url.Contains(".blob.core.")
-                        ? $"blobxfer download --storage-url \"$url\" --local-path \"$path\" --chunk-size-bytes 104857600 --rename --include '{StorageAccountUrlSegments.Create(f.Url).BlobName}'"
-                        : "mkdir -p $(dirname \"$path\") && wget -O \"$path\" \"$url\"";
-
-                    return $"{setVariables} && {downloadSingleFile} && {exitIfDownloadedFileIsNotFound} && {incrementTotalBytesTransferred}"; }))
-                + $" && echo FileDownloadSizeInBytes=$total_bytes >> {metricsPath}";
+            // Build file download script.
+            var downloadScriptBuilder = new StringBuilder();
+            downloadScriptBuilder.AppendLine(@"#!/bin/bash
+total_bytes=0
+check_file() {
+  if [[-f ""$1""]]; then
+    total_bytes=$((total_bytes + $(stat - c % s ""$1"") ))
+  else
+    echo ""Failed to download: $1""
+    exit 1
+  fi
+}
+blob_download() {
+  azcopy copy ""$1"" ""$2"" --from-to=BlobLocal --check-md5=FailIfDifferent --log-level=NONE
+  check_file ""$2""
+}
+web_download() {
+  mkdir -p $(dirname ""$2"")
+  wget -O ""$2"" ""$1""
+  check_file ""$2""
+}
+export AZCOPY_DISABLE_HIERARCHICAL_SCAN=true
+export AZCOPY_PARALLEL_STAT_FILES=true
+export AZCOPY_DISABLE_SYSLOG=true");
+            // Add blobs to download.
+            downloadScriptBuilder.AppendJoin("\n", filesToDownload.Where(f => f.Url.Contains(".blob.core.")).Select(f => $"blob_download '{f.Url}' '{f.Path}'"));
+            // Add public URLs to download.
+            downloadScriptBuilder.AppendJoin("\n", filesToDownload.Where(f => !f.Url.Contains(".blob.core.")).Select(f => $"web_download '{f.Url}' '{f.Path}'"));
+            // Save total bytes downloaded.
+            downloadScriptBuilder.AppendLine($"echo FileDownloadSizeInBytes=$total_bytes >> {metricsPath}");
 
             var downloadFilesScriptPath = $"{batchExecutionDirectoryPath}/{DownloadFilesScriptFileName}";
             var downloadFilesScriptUrl = await this.storageAccessProvider.MapLocalPathToSasUrlAsync(downloadFilesScriptPath);
-            await this.storageAccessProvider.UploadBlobAsync(downloadFilesScriptPath, downloadFilesScriptContent);
+            await this.storageAccessProvider.UploadBlobAsync(downloadFilesScriptPath, downloadScriptBuilder.ToString());
 
             var filesToUpload = await Task.WhenAll(
                 task.Outputs.Select(async f =>
@@ -643,20 +659,38 @@ namespace TesApi.Web
 
             // Ignore missing stdout/stderr files. CWL workflows have an issue where if the stdout/stderr are redirected, they are still listed in the TES outputs
             // Ignore any other missing files and directories. WDL tasks can have optional output files.
-            // Syntax is: If file or directory doesn't exist, run a noop (":") operator, otherwise run the upload command:
-            // { if not exists do nothing else upload; } && { ... }
-            var uploadFilesScriptContent = "total_bytes=0 && "
-                + string.Join(" && ", filesToUpload.Select(f => {
-                    var setVariables = $"path='{f.Path}' && url='{f.Url}'";
-                    var blobxferCommand = $"blobxfer upload --storage-url \"$url\" --local-path \"$path\" --one-shot-bytes 104857600 {(f.Type == TesFileType.FILEEnum ? "--rename --no-recursive" : string.Empty)}";
-
-                    return $"{{ {setVariables} && [ ! -e \"$path\" ] && : || {{ {blobxferCommand} && {incrementTotalBytesTransferred}; }} }}";
-                }))
-                + $" && echo FileUploadSizeInBytes=$total_bytes >> {metricsPath}";
+            var uploadScriptBuilder = new StringBuilder();
+            uploadScriptBuilder.AppendLine(@"#!/bin/bash
+set -e
+total_bytes=0
+count_bytes() {
+  total_bytes=$((total_bytes + $(stat - c % s ""$1"") ))
+}
+file_upload() {
+  if [[ -f ""$1"" ]]; then
+    azcopy copy ""$1"" ""$2"" --from-to=LocalBlob --blob-type=BlockBlob --check-md5=FailIfDifferent --log-level=NONE
+    count_bytes ""$1""
+  fi
+}
+dir_upload() {
+  if [[ -d ""$1"" ]]; then
+    azcopy copy ""$1"" ""$2"" --recursive --from-to=LocalBlob --blob-type=BlockBlob --check-md5=FailIfDifferent --log-level=NONE
+    count_bytes ""$1""
+  fi
+}
+export AZCOPY_DISABLE_HIERARCHICAL_SCAN=true
+export AZCOPY_PARALLEL_STAT_FILES=true
+export AZCOPY_DISABLE_SYSLOG=true");
+            // Add files to upload.
+            uploadScriptBuilder.AppendJoin("\n", filesToUpload.Where(f => f.Type == TesFileType.FILEEnum).Select(f => $"file_upload '{f.Path}' '{f.Url}'"));
+            // Add directories to upload.
+            uploadScriptBuilder.AppendJoin("\n", filesToUpload.Where(f => f.Type == TesFileType.DIRECTORYEnum).Select(f => $"dir_upload '{f.Path}' '{f.Url}'"));
+            // Save total bytes downloaded.
+            uploadScriptBuilder.AppendLine($"echo FileUploadSizeInBytes=$total_bytes >> {metricsPath}");
 
             var uploadFilesScriptPath = $"{batchExecutionDirectoryPath}/{UploadFilesScriptFileName}";
             var uploadFilesScriptSasUrl = await this.storageAccessProvider.MapLocalPathToSasUrlAsync(uploadFilesScriptPath);
-            await this.storageAccessProvider.UploadBlobAsync(uploadFilesScriptPath, uploadFilesScriptContent);
+            await this.storageAccessProvider.UploadBlobAsync(uploadFilesScriptPath, uploadScriptBuilder.ToString());
 
             var executor = task.Executors.First();
 
@@ -668,6 +702,7 @@ namespace TesApi.Web
 
             var sb = new StringBuilder();
 
+            sb.AppendLine("#!/bin/sh");
             sb.AppendLine($"write_kv() {{ echo \"$1=$2\" >> /mnt{metricsPath}; }} && \\");  // Function that appends key=value pair to metrics.txt file
             sb.AppendLine($"write_ts() {{ write_kv $1 $(date -Iseconds --utc); }} && \\");  // Function that appends key=<current datetime> to metrics.txt file
             sb.AppendLine($"mkdir -p /mnt{batchExecutionDirectoryPath} && \\");
@@ -692,17 +727,11 @@ namespace TesApi.Web
                 sb.AppendLine($"write_ts CromwellDrsLocalizerPullEnd && \\");
             }
 
-            if (copyUtilImageIsPublic)
-            {
-                sb.AppendLine($"write_ts CopyUtilPullStart && \\");
-                sb.AppendLine($"docker pull --quiet {copyUtilImageName} && \\");
-                sb.AppendLine($"write_ts CopyUtilPullEnd && \\");
-            }
-
+            // Private executor images are pulled via pool ContainerConfiguration, along with the copy utility image.
             if (executorImageIsPublic)
             {
-                // Private executor images are pulled via pool ContainerConfiguration
                 sb.AppendLine($"write_ts ExecutorPullStart && docker pull --quiet {executor.Image} && write_ts ExecutorPullEnd && \\");
+                sb.AppendLine($"write_ts CopyUtilPullStart && docker pull --quiet {copyUtilImageName} && write_ts CopyUtilPullEnd && \\");
             }
 
             // The remainder of the script downloads the inputs, runs the main executor container, and uploads the outputs, including the metrics.txt file
@@ -726,7 +755,7 @@ namespace TesApi.Web
             }
 
             sb.AppendLine($"write_ts DownloadStart && \\");
-            sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint=/bin/sh {copyUtilImageName} {downloadFilesScriptPath} && \\");
+            sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint=/bin/bash {copyUtilImageName} {downloadFilesScriptPath} && \\");
             sb.AppendLine($"write_ts DownloadEnd && \\");
             sb.AppendLine($"write_ts SetPermissionsStart && \\");
             sb.AppendLine($"chmod -R o+rwx /mnt{cromwellPathPrefixWithoutEndSlash} && \\");
@@ -735,7 +764,7 @@ namespace TesApi.Web
             sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint= --workdir / {executor.Image} {executor.Command[0]} -c \"{ string.Join(" && ", executor.Command.Skip(1))}\" && \\");
             sb.AppendLine($"write_ts ExecutorEnd && \\");
             sb.AppendLine($"write_ts UploadStart && \\");
-            sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint=/bin/sh {copyUtilImageName} {uploadFilesScriptPath} && \\");
+            sb.AppendLine($"docker run --rm {volumeMountsOption} --entrypoint=/bin/bash {copyUtilImageName} {uploadFilesScriptPath} && \\");
             sb.AppendLine($"write_ts UploadEnd && \\");
 
             // Get local disk info (col 2: file system type, col 3: size in KiB, col 4 KiB used).

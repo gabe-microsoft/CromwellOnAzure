@@ -27,8 +27,8 @@ namespace TesApi.Tests
     [TestClass]
     public class BatchSchedulerTests
     {
-        private static readonly Regex downloadBlobsRegex = new(@"path='([^']*)' && url='([^']*)' && blobxfer download");
-        private static readonly Regex downloadFilesWgetRegex = new(@"path='([^']*)' && url='([^']*)' && mkdir .* wget");
+        private static readonly Regex downloadBlobsRegex = new(@"^blob_download '([^']*)' '([^']*)'$");
+        private static readonly Regex downloadFilesWgetRegex = new(@"^web_download '([^']*)' '([^']*)'$");
 
         [TestCategory("TES 1.1")]
         [TestMethod]
@@ -178,9 +178,9 @@ namespace TesApi.Tests
             (_, var cloudTask, _) = await ProcessTesTaskAndGetBatchJobArgumentsAsync();
 
             Assert.AreEqual(3, cloudTask.ResourceFiles.Count);
-            Assert.IsTrue(cloudTask.ResourceFiles.Any(f => f.FilePath.Equals("/mnt/cromwell-executions/workflow1/workflowId1/call-Task1/execution/__batch/batch_script")));
-            Assert.IsTrue(cloudTask.ResourceFiles.Any(f => f.FilePath.Equals("/mnt/cromwell-executions/workflow1/workflowId1/call-Task1/execution/__batch/upload_files_script")));
-            Assert.IsTrue(cloudTask.ResourceFiles.Any(f => f.FilePath.Equals("/mnt/cromwell-executions/workflow1/workflowId1/call-Task1/execution/__batch/download_files_script")));
+            Assert.IsTrue(cloudTask.ResourceFiles.Any(f => f.FilePath.Equals("/mnt/cromwell-executions/workflow1/workflowId1/call-Task1/execution/__batch/task.sh")));
+            Assert.IsTrue(cloudTask.ResourceFiles.Any(f => f.FilePath.Equals("/mnt/cromwell-executions/workflow1/workflowId1/call-Task1/execution/__batch/upload_files.sh")));
+            Assert.IsTrue(cloudTask.ResourceFiles.Any(f => f.FilePath.Equals("/mnt/cromwell-executions/workflow1/workflowId1/call-Task1/execution/__batch/download_files.sh")));
         }
 
         [TestMethod]
@@ -731,7 +731,7 @@ ScriptEnd=2020-10-08T02:50:30+00:00";
             var azureProxy = GetMockAzureProxy(AzureProxyReturnValues.Defaults);
 
             (_, var cloudTask, var poolInformation) = await ProcessTesTaskAndGetBatchJobArgumentsAsync(tesTask, GetMockConfig(), azureProxy);
-            var batchScript = (string)azureProxy.Invocations.FirstOrDefault(i => i.Method.Name == nameof(IAzureProxy.UploadBlobAsync) && i.Arguments[0].ToString().Contains("/batch_script"))?.Arguments[1];
+            var batchScript = (string)azureProxy.Invocations.FirstOrDefault(i => i.Method.Name == nameof(IAzureProxy.UploadBlobAsync) && i.Arguments[0].ToString().Contains("/task.sh"))?.Arguments[1];
 
             Assert.IsNotNull(poolInformation.AutoPoolSpecification.PoolSpecification.VirtualMachineConfiguration.ContainerConfiguration);
             Assert.AreEqual("registryServer1", poolInformation.AutoPoolSpecification.PoolSpecification.VirtualMachineConfiguration.ContainerConfiguration.ContainerRegistries.FirstOrDefault()?.RegistryServer);
@@ -747,7 +747,7 @@ ScriptEnd=2020-10-08T02:50:30+00:00";
             var azureProxy = GetMockAzureProxy(AzureProxyReturnValues.Defaults);
 
             (_, var cloudTask, var poolInformation) = await ProcessTesTaskAndGetBatchJobArgumentsAsync(tesTask, GetMockConfig(), azureProxy);
-            var batchScript = (string)azureProxy.Invocations.FirstOrDefault(i => i.Method.Name == nameof(IAzureProxy.UploadBlobAsync) && i.Arguments[0].ToString().Contains("/batch_script"))?.Arguments[1];
+            var batchScript = (string)azureProxy.Invocations.FirstOrDefault(i => i.Method.Name == nameof(IAzureProxy.UploadBlobAsync) && i.Arguments[0].ToString().Contains("/task.sh"))?.Arguments[1];
 
             Assert.IsNull(poolInformation.AutoPoolSpecification.PoolSpecification.VirtualMachineConfiguration.ContainerConfiguration);
             Assert.AreEqual(3, Regex.Matches(batchScript, tesTask.Executors.First().Image, RegexOptions.IgnoreCase).Count);
@@ -931,7 +931,7 @@ ScriptEnd=2020-10-08T02:50:30+00:00";
 
         private static IEnumerable<FileToDownload> GetFilesToDownload(Mock<IAzureProxy> azureProxy)
         {
-            var downloadFilesScriptContent = (string)azureProxy.Invocations.FirstOrDefault(i => i.Method.Name == nameof(IAzureProxy.UploadBlobAsync) && i.Arguments[0].ToString().Contains("/download_files_script"))?.Arguments[1];
+            var downloadFilesScriptContent = (string)azureProxy.Invocations.FirstOrDefault(i => i.Method.Name == nameof(IAzureProxy.UploadBlobAsync) && i.Arguments[0].ToString().Contains("/download_files.sh"))?.Arguments[1];
 
             if (string.IsNullOrEmpty(downloadFilesScriptContent))
             {
@@ -940,11 +940,11 @@ ScriptEnd=2020-10-08T02:50:30+00:00";
 
             var blobsToDownload = downloadBlobsRegex.Matches(downloadFilesScriptContent)
                 .Cast<System.Text.RegularExpressions.Match>()
-                .Select(m => new FileToDownload { LocalPath = m.Groups[1].Value, StorageUrl = m.Groups[2].Value });
+                .Select(m => new FileToDownload { LocalPath = m.Groups[2].Value, StorageUrl = m.Groups[1].Value });
 
             var wgetFilesToDownload = downloadFilesWgetRegex.Matches(downloadFilesScriptContent)
                 .Cast<System.Text.RegularExpressions.Match>()
-                .Select(m => new FileToDownload { LocalPath = m.Groups[1].Value, StorageUrl = m.Groups[2].Value });
+                .Select(m => new FileToDownload { LocalPath = m.Groups[2].Value, StorageUrl = m.Groups[1].Value });
 
             return blobsToDownload.Union(wgetFilesToDownload);
         }
