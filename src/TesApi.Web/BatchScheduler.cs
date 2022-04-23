@@ -623,7 +623,7 @@ namespace TesApi.Web
             downloadScriptBuilder.AppendLine(@"#!/bin/bash
 total_bytes=0
 check_file() {
-  if [[-f ""$1""]]; then
+  if [[ -f ""$1"" ]]; then
     total_bytes=$((total_bytes + $(stat - c % s ""$1"") ))
   else
     echo ""Failed to download: $1""
@@ -644,8 +644,10 @@ export AZCOPY_PARALLEL_STAT_FILES=true
 export AZCOPY_DISABLE_SYSLOG=true");
             // Add blobs to download.
             downloadScriptBuilder.AppendJoin("\n", filesToDownload.Where(f => f.Url.Contains(".blob.core.")).Select(f => $"blob_download '{f.Url}' '{f.Path}'"));
+            downloadScriptBuilder.AppendLine();
             // Add public URLs to download.
             downloadScriptBuilder.AppendJoin("\n", filesToDownload.Where(f => !f.Url.Contains(".blob.core.")).Select(f => $"web_download '{f.Url}' '{f.Path}'"));
+            downloadScriptBuilder.AppendLine();
             // Save total bytes downloaded.
             downloadScriptBuilder.AppendLine($"echo FileDownloadSizeInBytes=$total_bytes >> {metricsPath}");
 
@@ -683,8 +685,10 @@ export AZCOPY_PARALLEL_STAT_FILES=true
 export AZCOPY_DISABLE_SYSLOG=true");
             // Add files to upload.
             uploadScriptBuilder.AppendJoin("\n", filesToUpload.Where(f => f.Type == TesFileType.FILEEnum).Select(f => $"file_upload '{f.Path}' '{f.Url}'"));
+            uploadScriptBuilder.AppendLine();
             // Add directories to upload.
             uploadScriptBuilder.AppendJoin("\n", filesToUpload.Where(f => f.Type == TesFileType.DIRECTORYEnum).Select(f => $"dir_upload '{f.Path}' '{f.Url}'"));
+            uploadScriptBuilder.AppendLine();
             // Save total bytes downloaded.
             uploadScriptBuilder.AppendLine($"echo FileUploadSizeInBytes=$total_bytes >> {metricsPath}");
 
