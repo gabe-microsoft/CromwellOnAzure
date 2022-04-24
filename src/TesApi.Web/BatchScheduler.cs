@@ -624,7 +624,7 @@ namespace TesApi.Web
 total_bytes=0
 check_file() {
   if [[ -f ""$1"" ]]; then
-    total_bytes=$((total_bytes + $(stat - c % s ""$1"") ))
+    total_bytes=$((total_bytes + $(stat -c %s ""$1"") ))
   else
     echo ""Failed to download: $1""
     exit 1
@@ -666,7 +666,7 @@ export AZCOPY_DISABLE_SYSLOG=true");
 set -e
 total_bytes=0
 count_bytes() {
-  total_bytes=$((total_bytes + $(stat - c % s ""$1"") ))
+  total_bytes=$((total_bytes + $(stat -c %s ""$1"") ))
 }
 file_upload() {
   if [[ -f ""$1"" ]]; then
