@@ -676,7 +676,7 @@ file_upload() {
 }
 dir_upload() {
   if [[ -d ""$1"" ]]; then
-    azcopy copy ""$1"" ""$2"" --recursive --from-to=LocalBlob --blob-type=BlockBlob --check-md5=FailIfDifferent --log-level=NONE
+    azcopy copy ""$1"" ""$2"" --recursive --as-subdir=false --from-to=LocalBlob --blob-type=BlockBlob --check-md5=FailIfDifferent --log-level=NONE
     count_bytes ""$1""
   fi
 }
