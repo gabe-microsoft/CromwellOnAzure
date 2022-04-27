@@ -667,40 +667,73 @@ export AZCOPY_DISABLE_SYSLOG=true");
                 task.Outputs.Select(async f =>
                     new TesOutput { Path = f.Path, Url = await this.storageAccessProvider.MapLocalPathToSasUrlAsync(f.Path, getContainerSas: true), Name = f.Name, Type = f.Type }));
 
+            // Currently, we upload all files and directories using a single AzCopy command.
+            // This is valid only if the destination is the same, with the same SAS token, for all outputs.
+            // Check that there's at least 1 file to upload (this should always be the case since we always upload at least: rc, stdout, stderr, and script).
+            if (filesToUpload.Length == 0)
+            {
+                throw new TesException("InvalidOutputAssertion", $"Expected at least one output for task Id {task.Id}");
+            }
+            // Get the storage account URL, blob container, and SAS token from URL of the first file for comparison to all others.
+            var m = Regex.Match(filesToUpload.First().Url, @"^(https://.+\.blob\.core\.windows\.net/)([^/\?]+])[^\?]*(\?.+)$");
+            if (!m.Success)
+            {
+                throw new TesException("InvalidOutputAssertion", $"Failed to parse output URL ({filesToUpload.First().Url}) for task Id {task.Id}");
+            }
+            var useStorageAccountUrl = m.Groups[1].Value;
+            var useBlobContainer = m.Groups[2].Value;
+            var useSAS = m.Groups[3].Value; // SAS token.
+            // Check that all outputs use the same storage account and blob container.
+            if (!filesToUpload.All(f => f.Url.StartsWith($"{useStorageAccountUrl}{useBlobContainer}")))
+            {
+                throw new TesException("InvalidOutputAssertion", $"Expected all outputs to use same storage account and blob container ({useStorageAccountUrl}{useBlobContainer}) for task Id {task.Id}");
+            }
+            // Check that all outputs use the same SAS token.
+            if (!filesToUpload.All(f => f.Url.EndsWith(useSAS)))
+            {
+                throw new TesException("InvalidOutputAssertion", $"Expected all outputs to use same SAS token for task Id {task.Id}");
+            }
+
+            // The file upload code also assumes that the uploaded blob path is the same as the local file path.
+            if (!filesToUpload.All(f => f.Url == $"{useStorageAccountUrl}{f.Path}{useSAS}"))
+            {
+                throw new TesException("InvalidOutputAssertion", $"Expected all outputs to use same local file path as blob path for task Id {task.Id}");
+            }
+
             // Ignore missing stdout/stderr files. CWL workflows have an issue where if the stdout/stderr are redirected, they are still listed in the TES outputs
             // Ignore any other missing files and directories. WDL tasks can have optional output files.
-            // Don't error out if upload fails, Cromwell will error if a required output is not found (this ensures all available outputs are uploaded to improve debugging).
+            // Don't error out if upload fails, Cromwell will error if a required output is not found.
             var uploadScriptBuilder = new StringBuilder();
             uploadScriptBuilder.AppendLine(@"#!/bin/bash
-total_bytes=0
-add_bytes() {
-  new_bytes=$1
-  total_bytes=$(( total_bytes + new_bytes ))
-}
-file_upload() {
+upload_paths=()
+add_file() {
   if [[ -f ""$1"" ]]; then
-    tx_bytes=$(azcopy copy ""$1"" ""$2"" --from-to=LocalBlob --blob-type=BlockBlob --check-md5=FailIfDifferent --log-level=NONE --output-type=json | grep -Po 'TotalBytesTransferred\\"":\\""\K\d+' | tail -n 1)
-    add_bytes ""${tx_bytes}""
-    echo ""Uploaded file: $1 (${tx_bytes} bytes)""
+    echo ""Uploading file: $1""
+    upload_paths+=(""$1"")
   fi
 }
-dir_upload() {
+add_dir() {
   if [[ -d ""$1"" ]]; then
-    tx_bytes=$(azcopy copy ""$1"" ""$2"" --recursive --as-subdir=false --from-to=LocalBlob --blob-type=BlockBlob --check-md5=FailIfDifferent --log-level=NONE --output-type=json | grep -Po 'TotalBytesTransferred\\"":\\""\K\d+' | tail -n 1)
-    add_bytes ""${tx_bytes}""
-    echo ""Uploaded directory: $1 (${tx_bytes} bytes)""
+    echo ""Uploading directory: $1""
+    upload_paths+=(""$1"")
   fi
+}
+upload() {
+  include_paths=""$(IFS=';' ; echo ""${upload_paths[*]}"")""
+  total_bytes=$(azcopy copy ""$1"" ""$2"" --include-path=""${include_paths}"" --recursive --as-subdir=false --from-to=LocalBlob --blob-type=BlockBlob --check-md5=FailIfDifferent --log-level=NONE --output-type=json | grep -Po 'TotalBytesTransferred\\"":\\""\K\d+' | tail -n 1)
 }
 export AZCOPY_DISABLE_HIERARCHICAL_SCAN=true
 export AZCOPY_PARALLEL_STAT_FILES=true
 export AZCOPY_DISABLE_SYSLOG=true");
             // Add files to upload.
-            uploadScriptBuilder.AppendJoin("\n", filesToUpload.Where(f => f.Type == TesFileType.FILEEnum).Select(f => $"file_upload '{f.Path}' '{f.Url}'"));
+            uploadScriptBuilder.AppendJoin("\n", filesToUpload.Where(f => f.Type == TesFileType.FILEEnum).Select(f => $"add_file '{f.Path}'"));
             uploadScriptBuilder.AppendLine();
             // Add directories to upload.
-            uploadScriptBuilder.AppendJoin("\n", filesToUpload.Where(f => f.Type == TesFileType.DIRECTORYEnum).Select(f => $"dir_upload '{f.Path}' '{f.Url}'"));
+            uploadScriptBuilder.AppendJoin("\n", filesToUpload.Where(f => f.Type == TesFileType.DIRECTORYEnum).Select(f => $"add_dir '{f.Path}'"));
             uploadScriptBuilder.AppendLine();
-            // Save total bytes downloaded.
+            // Issue upload command.
+            uploadScriptBuilder.AppendLine($"upload '/{useBlobContainer}' '{useStorageAccountUrl}{useBlobContainer}{useSAS}'");
+            // Save total bytes uploaded.
             uploadScriptBuilder.AppendLine($"echo FileUploadSizeInBytes=$total_bytes >> {metricsPath}");
 
             var uploadFilesScriptPath = $"{batchExecutionDirectoryPath}/{UploadFilesScriptFileName}";
