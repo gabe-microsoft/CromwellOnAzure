@@ -74,7 +74,7 @@ namespace TesApi.Web
             this.usePreemptibleVmsOnly = GetBoolValue(configuration, "UsePreemptibleVmsOnly", false);
             this.batchNodesSubnetId = GetStringValue(configuration, "BatchNodesSubnetId", string.Empty);
             this.dockerInDockerImageName = GetStringValue(configuration, "DockerInDockerImageName", "docker");
-            this.copyUtilImageName = GetStringValue(configuration, "CopyUtilImageName", "wdltest.azurecr.io/azcopy:10.14.1-alpine"); // TODO: publish this image somewhere more public (MCR).
+            this.copyUtilImageName = GetStringValue(configuration, "CopyUtilImageName", "wdltest.azurecr.io/coa-copyutil-azcopy:10.14.1"); // TODO: publish this image somewhere more public (MCR).
             this.cromwellDrsLocalizerImageName = GetStringValue(configuration, "CromwellDrsLocalizerImageName", "broadinstitute/cromwell-drs-localizer:develop");
             this.disableBatchNodesPublicIpAddress = GetBoolValue(configuration, "DisableBatchNodesPublicIpAddress", false);
             //this.defaultStorageAccountName = GetStringValue(configuration, "DefaultStorageAccountName", string.Empty);
@@ -619,25 +619,33 @@ namespace TesApi.Web
                 .Select(async f => await GetTesInputFileUrl(f, task.Id, queryStringsToRemoveFromLocalFilePaths)));
 
             // Build file download script.
+            // Check that each requested file was downloaded and error if the file doesn't exist locally (don't error for any other reason).
             var downloadScriptBuilder = new StringBuilder();
             downloadScriptBuilder.AppendLine(@"#!/bin/bash
 total_bytes=0
-check_file() {
-  if [[ -f ""$1"" ]]; then
-    total_bytes=$((total_bytes + $(stat -c %s ""$1"") ))
-  else
+add_bytes() {
+  new_bytes=$1
+  total_bytes=$(( total_bytes + new_bytes ))
+}
+assert_file_exists() {
+  if [[ ! -f ""$1"" ]]; then
     echo ""Failed to download: $1""
     exit 1
   fi
 }
 blob_download() {
-  azcopy copy ""$1"" ""$2"" --from-to=BlobLocal --check-md5=FailIfDifferent --log-level=NONE
-  check_file ""$2""
+  tx_bytes=$(azcopy copy ""$1"" ""$2"" --from-to=BlobLocal --check-md5=FailIfDifferent --log-level=NONE --output-type=json | grep -Po 'TotalBytesTransferred\\"":\\""\K\d+' | tail -n 1)
+  assert_file_exists ""$2""
+  add_bytes ""${tx_bytes}""
+  echo ""Downloaded blob to $2: ${tx_bytes} bytes""
 }
 web_download() {
-  mkdir -p $(dirname ""$2"")
+  mkdir -p ""$(dirname ""$2"")""
   wget -O ""$2"" ""$1""
-  check_file ""$2""
+  assert_file_exists ""$2""
+  tx_bytes=""$(stat -c %s ""$2"")""
+  add_bytes ""${tx_bytes}""
+  echo ""Downloaded URL to $2: ${tx_bytes} bytes""
 }
 export AZCOPY_DISABLE_HIERARCHICAL_SCAN=true
 export AZCOPY_PARALLEL_STAT_FILES=true
@@ -661,23 +669,26 @@ export AZCOPY_DISABLE_SYSLOG=true");
 
             // Ignore missing stdout/stderr files. CWL workflows have an issue where if the stdout/stderr are redirected, they are still listed in the TES outputs
             // Ignore any other missing files and directories. WDL tasks can have optional output files.
+            // Don't error out if upload fails, Cromwell will error if a required output is not found (this ensures all available outputs are uploaded to improve debugging).
             var uploadScriptBuilder = new StringBuilder();
             uploadScriptBuilder.AppendLine(@"#!/bin/bash
-set -e
 total_bytes=0
-count_bytes() {
-  total_bytes=$((total_bytes + $(stat -c %s ""$1"") ))
+add_bytes() {
+  new_bytes=$1
+  total_bytes=$(( total_bytes + new_bytes ))
 }
 file_upload() {
   if [[ -f ""$1"" ]]; then
-    azcopy copy ""$1"" ""$2"" --from-to=LocalBlob --blob-type=BlockBlob --check-md5=FailIfDifferent --log-level=NONE
-    count_bytes ""$1""
+    tx_bytes=$(azcopy copy ""$1"" ""$2"" --from-to=LocalBlob --blob-type=BlockBlob --check-md5=FailIfDifferent --log-level=NONE --output-type=json | grep -Po 'TotalBytesTransferred\\"":\\""\K\d+' | tail -n 1)
+    add_bytes ""${tx_bytes}""
+    echo ""Uploaded file: $1 (${tx_bytes} bytes)""
   fi
 }
 dir_upload() {
   if [[ -d ""$1"" ]]; then
-    azcopy copy ""$1"" ""$2"" --recursive --as-subdir=false --from-to=LocalBlob --blob-type=BlockBlob --check-md5=FailIfDifferent --log-level=NONE
-    count_bytes ""$1""
+    tx_bytes=$(azcopy copy ""$1"" ""$2"" --recursive --as-subdir=false --from-to=LocalBlob --blob-type=BlockBlob --check-md5=FailIfDifferent --log-level=NONE --output-type=json | grep -Po 'TotalBytesTransferred\\"":\\""\K\d+' | tail -n 1)
+    add_bytes ""${tx_bytes}""
+    echo ""Uploaded directory: $1 (${tx_bytes} bytes)""
   fi
 }
 export AZCOPY_DISABLE_HIERARCHICAL_SCAN=true
