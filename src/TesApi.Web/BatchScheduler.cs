@@ -706,16 +706,19 @@ export AZCOPY_DISABLE_SYSLOG=true");
             var uploadScriptBuilder = new StringBuilder();
             uploadScriptBuilder.AppendLine(@"#!/bin/bash
 upload_paths=()
+append_path() { # Strip root_path before appending.
+  upload_paths+=(""${1:${#root_path}}"")
+}
 add_file() {
   if [[ -f ""$1"" ]]; then
     echo ""Uploading file: $1""
-    upload_paths+=(""$1"")
+    append_path ""$1""
   fi
 }
 add_dir() {
   if [[ -d ""$1"" ]]; then
     echo ""Uploading directory: $1""
-    upload_paths+=(""$1"")
+    append_path ""$1""
   fi
 }
 upload() {
@@ -725,6 +728,8 @@ upload() {
 export AZCOPY_DISABLE_HIERARCHICAL_SCAN=true
 export AZCOPY_PARALLEL_STAT_FILES=true
 export AZCOPY_DISABLE_SYSLOG=true");
+            // Define root directory for all files.
+            uploadScriptBuilder.AppendLine($"root_path=\"/{useBlobContainer}/\"");
             // Add files to upload.
             uploadScriptBuilder.AppendJoin("\n", filesToUpload.Where(f => f.Type == TesFileType.FILEEnum).Select(f => $"add_file '{f.Path}'"));
             uploadScriptBuilder.AppendLine();
