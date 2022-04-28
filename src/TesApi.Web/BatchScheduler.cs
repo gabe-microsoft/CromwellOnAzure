@@ -675,7 +675,7 @@ export AZCOPY_DISABLE_SYSLOG=true");
                 throw new TesException("InvalidOutputAssertion", $"Expected at least one output for task Id {task.Id}");
             }
             // Get the storage account URL, blob container, and SAS token from URL of the first file for comparison to all others.
-            var m = Regex.Match(filesToUpload.First().Url, @"^(https://.+\.blob\.core\.windows\.net/)([^/\?]+])[^\?]*(\?.+)$");
+            var m = Regex.Match(filesToUpload.First().Url, @"^(https://.+\.blob\.core\.windows\.net/)([^/\?]+)[^\?]*(\?.+)$");
             if (!m.Success)
             {
                 throw new TesException("InvalidOutputAssertion", $"Failed to parse output URL ({filesToUpload.First().Url}) for task Id {task.Id}");
