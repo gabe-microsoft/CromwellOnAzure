@@ -675,7 +675,7 @@ export AZCOPY_DISABLE_SYSLOG=true");
                 throw new TesException("InvalidOutputAssertion", $"Expected at least one output for task Id {task.Id}");
             }
             // Get the storage account URL, blob container, and SAS token from URL of the first file for comparison to all others.
-            var m = Regex.Match(filesToUpload.First().Url, @"^(https://.+\.blob\.core\.windows\.net/)([^/\?]+)[^\?]*(\?.+)$");
+            var m = Regex.Match(filesToUpload.First().Url, @"^(https://.+\.blob\.core\.windows\.net)/([^/\?]+)[^\?]*(\?.+)$");
             if (!m.Success)
             {
                 throw new TesException("InvalidOutputAssertion", $"Failed to parse output URL ({filesToUpload.First().Url}) for task Id {task.Id}");
@@ -684,9 +684,9 @@ export AZCOPY_DISABLE_SYSLOG=true");
             var useBlobContainer = m.Groups[2].Value;
             var useSAS = m.Groups[3].Value; // SAS token.
             // Check that all outputs use the same storage account and blob container.
-            if (!filesToUpload.All(f => f.Url.StartsWith($"{useStorageAccountUrl}{useBlobContainer}")))
+            if (!filesToUpload.All(f => f.Url.StartsWith($"{useStorageAccountUrl}/{useBlobContainer}")))
             {
-                throw new TesException("InvalidOutputAssertion", $"Expected all outputs to use same storage account and blob container ({useStorageAccountUrl}{useBlobContainer}) for task Id {task.Id}");
+                throw new TesException("InvalidOutputAssertion", $"Expected all outputs to use same storage account and blob container ({useStorageAccountUrl}/{useBlobContainer}) for task Id {task.Id}");
             }
             // Check that all outputs use the same SAS token.
             if (!filesToUpload.All(f => f.Url.EndsWith(useSAS)))
@@ -732,7 +732,7 @@ export AZCOPY_DISABLE_SYSLOG=true");
             uploadScriptBuilder.AppendJoin("\n", filesToUpload.Where(f => f.Type == TesFileType.DIRECTORYEnum).Select(f => $"add_dir '{f.Path}'"));
             uploadScriptBuilder.AppendLine();
             // Issue upload command.
-            uploadScriptBuilder.AppendLine($"upload '/{useBlobContainer}' '{useStorageAccountUrl}{useBlobContainer}{useSAS}'");
+            uploadScriptBuilder.AppendLine($"upload '/{useBlobContainer}' '{useStorageAccountUrl}/{useBlobContainer}{useSAS}'");
             // Save total bytes uploaded.
             uploadScriptBuilder.AppendLine($"echo FileUploadSizeInBytes=$total_bytes >> {metricsPath}");
 
