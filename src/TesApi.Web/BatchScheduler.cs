@@ -723,8 +723,9 @@ add_dir() {
 }
 upload() {
   include_paths=""$(IFS=';' ; echo ""${upload_paths[*]}"")""
-  total_bytes=$(azcopy copy ""$1"" ""$2"" --include-path=""${include_paths}"" --recursive --as-subdir=false --from-to=LocalBlob --blob-type=BlockBlob --check-md5=FailIfDifferent --log-level=NONE --output-type=json | grep -Po 'TotalBytesTransferred\\"":\\""\K\d+' | tail -n 1)
+  total_bytes=$(azcopy copy ""$1"" ""$2"" --include-path=""${include_paths}"" --recursive --as-subdir=false --from-to=LocalBlob --blob-type=BlockBlob --block-size-mb=100 --check-md5=FailIfDifferent --log-level=NONE --output-type=json | grep -Po 'TotalBytesTransferred\\"":\\""\K\d+' | tail -n 1)
 }
+export AZCOPY_CONCURRENCY_VALUE=8
 export AZCOPY_DISABLE_HIERARCHICAL_SCAN=true
 export AZCOPY_PARALLEL_STAT_FILES=true
 export AZCOPY_DISABLE_SYSLOG=true");
