@@ -254,19 +254,22 @@ namespace TesApi.Web
                 job.PoolInformation = poolInformation;  // Redoing this since the container registry password is not retrieved by GetJobAsync()
                 await job.AddTaskAsync(cloudTask);
                 await job.CommitAsync();
+
+                throw new Exception("DEBUG: Error adding tasks to job");
             }
             catch (Exception ex)
             {
-                var batchError = JsonConvert.SerializeObject((ex as BatchException)?.RequestInformation?.BatchError);
-                logger.LogError(ex, $"Deleting {job.Id} because adding task to it failed. Batch error: {batchError}");
+                // DEBUG: don't delete the pool.
+                //var batchError = JsonConvert.SerializeObject((ex as BatchException)?.RequestInformation?.BatchError);
+                //logger.LogError(ex, $"Deleting {job.Id} because adding task to it failed. Batch error: {batchError}");
 
-                await batchClient.JobOperations.DeleteJobAsync(job.Id);
+                //await batchClient.JobOperations.DeleteJobAsync(job.Id);
 
-                if (!string.IsNullOrWhiteSpace(poolInformation?.PoolId))
-                {
-                    // With manual pools, the PoolId property is set
-                    await DeleteBatchPoolIfExistsAsync(poolInformation.PoolId);
-                }
+                //if (!string.IsNullOrWhiteSpace(poolInformation?.PoolId))
+                //{
+                //    // With manual pools, the PoolId property is set
+                //    await DeleteBatchPoolIfExistsAsync(poolInformation.PoolId);
+                //}
 
                 throw;
             }
