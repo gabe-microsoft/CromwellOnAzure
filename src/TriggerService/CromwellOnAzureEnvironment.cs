@@ -175,7 +175,7 @@ namespace TriggerService
                     {
                         case WorkflowStatus.Running:
                             {
-                                await UploadTimingAsync(id, sampleName);
+                                // await UploadTimingAsync(id, sampleName);
                                 break;
                             }
                         case WorkflowStatus.Aborted:
