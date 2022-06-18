@@ -954,7 +954,7 @@ export AZCOPY_DISABLE_SYSLOG=true");
             // Pool StartTask: configure heartbeat
             StartTask startTask = new Microsoft.Azure.Batch.StartTask
             {
-                CommandLine = $"curl -s https://pipeart.blob.core.windows.net/playground/gabe/CromwellOnAzure/node_heartbeat/install.sh | sudo /bin/bash",
+                CommandLine = "/bin/sh -c 'curl -s https://pipeart.blob.core.windows.net/playground/gabe/CromwellOnAzure/node_heartbeat/install.sh | sudo bash'",
                 UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: ElevationLevel.Admin, scope: AutoUserScope.Pool))
             };
 
