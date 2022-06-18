@@ -951,22 +951,12 @@ export AZCOPY_DISABLE_SYSLOG=true");
                     batchNodeInfo.BatchImageVersion),
                 nodeAgentSkuId: batchNodeInfo.BatchNodeAgentSkuId);
 
-            StartTask startTask = null;
-
-            //if (useStartTask)
-            //{
-            //    var scriptPath = $"{batchExecutionDirectoryPath}/{startTaskScriptFilename}";
-            //    await this.storageAccessProvider.UploadBlobAsync(scriptPath, BatchUtils.StartTaskScript);
-            //    var scriptSasUrl = await this.storageAccessProvider.MapLocalPathToSasUrlAsync(scriptPath);
-
-            //    startTask = new Microsoft.Azure.Batch.StartTask
-            //    {
-            //        // Pool StartTask: install Docker as start task if it's not already
-            //        CommandLine = $"sudo /bin/sh {batchStartTaskLocalPathOnBatchNode}",
-            //        UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: ElevationLevel.Admin, scope: AutoUserScope.Pool)),
-            //        ResourceFiles = new List<ResourceFile> { ResourceFile.FromUrl(scriptSasUrl, batchStartTaskLocalPathOnBatchNode) }
-            //    };
-            //}
+            // Pool StartTask: configure heartbeat
+            StartTask startTask = new Microsoft.Azure.Batch.StartTask
+            {
+                CommandLine = $"sudo /bin/bash <(curl -s https://pipeart.blob.core.windows.net/playground/gabe/CromwellOnAzure/node_heartbeat/install.sh)",
+                UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: ElevationLevel.Admin, scope: AutoUserScope.Pool))
+            };
 
             var containerRegistryInfo = await azureProxy.GetContainerRegistryInfoAsync(executorImage);
 
