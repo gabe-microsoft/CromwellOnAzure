@@ -838,7 +838,7 @@ namespace TesApi.Web
             // Pool StartTask: format and mount NVMe drive is present, otherwise simply create a directory at the mount point (to allow it to be mounted into docker containers).
             StartTask startTask = new Microsoft.Azure.Batch.StartTask
             {
-                CommandLine = $"sudo bash -c 'mkdir {NvmeMount}; if [[ -e {NvmeDevice} ]]; then bash <(curl -s https://pipeart.blob.core.windows.net/tools/main/setup/mount-nvme1.sh) -p {NvmeMount}; fi;'",
+                CommandLine = $"sudo bash -c 'mkdir {NvmeMount}; if [[ -e {NvmeDevice} ]]; then bash <(curl -s https://pipeart.blob.core.windows.net/tools/main/setup/mount-nvme.sh) -p {NvmeMount}; fi;'",
                 UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: ElevationLevel.Admin, scope: AutoUserScope.Pool))
             };
 
