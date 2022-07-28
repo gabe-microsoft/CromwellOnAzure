@@ -34,6 +34,8 @@ namespace TesApi.Web
         private const string UploadFilesScriptFileName = "upload_files_script";
         private const string DownloadFilesScriptFileName = "download_files_script";
         private const string startTaskScriptFilename = "start-task.sh";
+        private const string NvmeDevice = "/dev/nvme0n1";
+        private const string NvmeMount = "/nvme0";
         private static readonly string batchStartTaskLocalPathOnBatchNode = $"/mnt/batch/tasks/startup/wd/{startTaskScriptFilename}";
         private static readonly Regex queryStringRegex = new(@"[^\?.]*(\?.*)");
         private readonly string dockerInDockerImageName;
@@ -648,7 +650,7 @@ namespace TesApi.Web
 
             var executor = task.Executors.First();
 
-            var volumeMountsOption = $"-v /mnt{cromwellPathPrefixWithoutEndSlash}:{cromwellPathPrefixWithoutEndSlash}";
+            var volumeMountsOption = $"-v /mnt{cromwellPathPrefixWithoutEndSlash}:{cromwellPathPrefixWithoutEndSlash} -v {NvmeMount}:{NvmeMount}";
 
             var executorImageIsPublic = (await azureProxy.GetContainerRegistryInfoAsync(executor.Image)) is null;
             var dockerInDockerImageIsPublic = (await azureProxy.GetContainerRegistryInfoAsync(dockerInDockerImageName)) is null;
@@ -745,7 +747,7 @@ namespace TesApi.Web
                 // This also requires that the main task runs inside a container. So we run the "docker" container that in turn runs other containers.
                 // If the executor image is public, there is no need for pool ContainerConfiguration and task can run normally, without being wrapped in a docker container.
                 // Volume mapping for docker.sock below allows the docker client in the container to access host's docker daemon.
-                var containerRunOptions = $"--rm -v /var/run/docker.sock:/var/run/docker.sock -v /mnt:/mnt ";
+                var containerRunOptions = $"--rm -v /var/run/docker.sock:/var/run/docker.sock -v /mnt:/mnt -v {NvmeMount}:{NvmeMount} ";
                 cloudTask.ContainerSettings = new TaskContainerSettings(dockerInDockerImageName, containerRunOptions);
             }
 
@@ -833,22 +835,12 @@ namespace TesApi.Web
                     batchNodeInfo.BatchImageVersion),
                 nodeAgentSkuId: batchNodeInfo.BatchNodeAgentSkuId);
 
-            StartTask startTask = null;
-
-            //if (useStartTask)
-            //{
-            //    var scriptPath = $"{batchExecutionDirectoryPath}/{startTaskScriptFilename}";
-            //    await this.storageAccessProvider.UploadBlobAsync(scriptPath, BatchUtils.StartTaskScript);
-            //    var scriptSasUrl = await this.storageAccessProvider.MapLocalPathToSasUrlAsync(scriptPath);
-
-            //    startTask = new Microsoft.Azure.Batch.StartTask
-            //    {
-            //        // Pool StartTask: install Docker as start task if it's not already
-            //        CommandLine = $"sudo /bin/sh {batchStartTaskLocalPathOnBatchNode}",
-            //        UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: ElevationLevel.Admin, scope: AutoUserScope.Pool)),
-            //        ResourceFiles = new List<ResourceFile> { ResourceFile.FromUrl(scriptSasUrl, batchStartTaskLocalPathOnBatchNode) }
-            //    };
-            //}
+            // Pool StartTask: format and mount NVMe drive is present, otherwise simply create a directory at the mount point (to allow it to be mounted into docker containers).
+            StartTask startTask = new Microsoft.Azure.Batch.StartTask
+            {
+                CommandLine = $"sudo bash -c 'mkdir {NvmeMount}; if [[ -e {NvmeDevice} ]]; then bash <(curl -s https://pipeart.blob.core.windows.net/tools/main/setup/mount-nvme1.sh) -p {NvmeMount}; fi;'",
+                UserIdentity = new UserIdentity(new AutoUserSpecification(elevationLevel: ElevationLevel.Admin, scope: AutoUserScope.Pool))
+            };
 
             var containerRegistryInfo = await azureProxy.GetContainerRegistryInfoAsync(executorImage);
 
